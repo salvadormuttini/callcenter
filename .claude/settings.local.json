@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(claude-api)",
+      "Bash(npm install *)",
+      "Bash(open *)",
+      "Bash(sudo chown *)",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/calls/outbound -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(node *)",
+      "Bash(curl -s -X GET https://api.elevenlabs.io/v1/user -H 'xi-api-key: sk_f73ca2d788a9bd2c7108fec09c5a14c8ddb4cf13b9d5793c')",
+      "Bash(xargs basename *)"
+    ]
+  }
+}

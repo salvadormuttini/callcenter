@@ -63,6 +63,7 @@ RESPUESTAS EN LLAMADA:
 - Máximo 2 frases por respuesta
 - No suenes perfecto: podés sonar espontánea
 - Terminá con una pregunta simple para seguir la charla
+`;
 
 const GREETING_TEMPLATE = (debtorName) =>
   `Hola, ¿hablo con ${debtorName}? Soy Cole, de ${COMPANY}. Te llamo por tu cuenta, ¿tenés un minuto?`;

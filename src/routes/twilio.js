@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 const conversation = require('../services/conversation');
 const claude = require('../services/claude');
 const elevenlabs = require('../services/elevenlabs');
+const { generateAndSendReport } = require('../services/callReport');
 const { GREETING_TEMPLATE, UNKNOWN_GREETING } = require('../config/valentina');
 
 const BASE_URL = process.env.BASE_URL;
@@ -210,12 +211,22 @@ router.post('/respond', (req, res) => {
 // ─── Estado ───────────────────────────────────────────────────────────────────
 
 router.post('/status', (req, res) => {
-  const { CallSid, CallStatus } = req.body;
+  const { CallSid, CallStatus, CallDuration } = req.body;
   console.log(`[Twilio] ${CallSid}: ${CallStatus}`);
+
   if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(CallStatus)) {
     const s = conversation.get(CallSid);
-    if (s) { console.log(`[${CallSid}] ${s.history.length} turnos`); conversation.destroy(CallSid); }
+    if (s) {
+      console.log(`[${CallSid}] ${s.history.length} turnos — generando reporte`);
+
+      // Generar y enviar reporte en background (no bloquea la respuesta a Twilio)
+      generateAndSendReport(s, CallSid, CallStatus, CallDuration)
+        .catch(err => console.error(`[${CallSid}] Error enviando reporte:`, err.message));
+
+      conversation.destroy(CallSid);
+    }
   }
+
   res.sendStatus(200);
 });
 

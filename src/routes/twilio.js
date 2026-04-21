@@ -229,11 +229,9 @@ router.post('/status', (req, res) => {
     if (s) {
       console.log(`[${CallSid}] ${s.history.length} turnos — generando reporte`);
 
-      // Generar y enviar reporte en background (no bloquea la respuesta a Twilio)
       generateAndSendReport(s, CallSid, CallStatus, CallDuration)
-        .catch(err => console.error(`[${CallSid}] Error enviando reporte:`, err.message));
-
-      conversation.destroy(CallSid);
+        .then(() => { console.log(`[${CallSid}] REPORTE OK`); conversation.destroy(CallSid); })
+        .catch(err => { console.error(`[${CallSid}] REPORTE ERROR`, err.message); console.error(err.stack); conversation.destroy(CallSid); });
     }
   }
 

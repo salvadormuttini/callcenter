@@ -38,7 +38,7 @@ function buildSystem(debtorInfo, customSystemPrompt = null) {
 async function streamBySentence(history, debtorInfo, onSentence, customSystemPrompt = null) {
   const stream = client.messages.stream({
     model: 'claude-haiku-4-5',
-    max_tokens: 120,
+    max_tokens: 80,
     system: buildSystem(debtorInfo, customSystemPrompt),
     messages: history,
   });
@@ -76,7 +76,8 @@ async function streamBySentence(history, debtorInfo, onSentence, customSystemPro
 async function getResponse(history, debtorInfo) {
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
-    max_tokens: 120,
+    temperature: 0.7,
+    max_tokens: 80,
     system: buildSystem(debtorInfo),
     messages: history,
   });

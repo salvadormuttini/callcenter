@@ -39,7 +39,7 @@ function buildGatherTwiml(audioUrl, gatherAction) {
     timeout: GATHER_TIMEOUT,
   });
 
-  gather.say({ language: 'es-AR' }, 'Hola, esto es una prueba de TwiML sin audio streaming');
+  gather.play(audioUrl);
 
   return twiml.toString();
 }

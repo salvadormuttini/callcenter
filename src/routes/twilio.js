@@ -225,6 +225,7 @@ router.post('/status', (req, res) => {
   console.log(`[Twilio] ${CallSid}: ${CallStatus}`);
 
   if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(CallStatus)) {
+console.log(`[${CallSid}] STATUS HOOK ENTRÓ`);
     const s = conversation.get(CallSid);
     if (s) {
       console.log(`[${CallSid}] ${s.history.length} turnos — generando reporte`);

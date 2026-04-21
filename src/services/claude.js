@@ -79,6 +79,7 @@ async function getResponse(history, debtorInfo) {
     temperature: 0.7,
     stop_sequences: ['\n\n'],
     max_tokens: 80,
+    top_p: 0.9,
     system: buildSystem(debtorInfo),
     messages: history,
   });

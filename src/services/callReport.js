@@ -78,10 +78,9 @@ Respondé SOLO con el JSON, sin texto adicional.`;
   };
 
   // Email y WhatsApp en paralelo
-  await Promise.allSettled([
-    sendCallReport(reportData),
-    sendWhatsAppReport(reportData),
-  ]);
+  const [emailResult, whatsappResult] = await Promise.allSettled([sendCallReport(reportData), sendWhatsAppReport(reportData)]);
+console.log('[Report] EMAIL:', emailResult.status, emailResult.reason?.message || 'OK');
+console.log('[Report] WHATSAPP:', whatsappResult.status, whatsappResult.reason?.message || 'OK');
 }
 
 module.exports = { generateAndSendReport };

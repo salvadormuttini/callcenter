@@ -40,17 +40,24 @@ function buildGatherTwiml(audioUrl, gatherAction) {
   });
 
   gather.say({ language: 'es-AR' }, 'Hola, esto es una prueba de TwiML sin audio streaming');
- twiml.redirect({ method: 'POST' }, `${gatherAction}?timeout=1`);
 
   return twiml.toString();
 }
 
 function buildFallbackTwiml(text, gatherAction) {
   const twiml = new twilio.twiml.VoiceResponse();
+
   twiml.say({ language: 'es-AR', voice: 'Polly.Lupe' }, text);
-  twiml.gather({ input: 'speech', action: gatherAction, method: 'POST',
-    language: 'es-AR', speechTimeout: 'auto', timeout: GATHER_TIMEOUT });
-  twiml.redirect({ method: 'POST' }, `${gatherAction}?timeout=1`);
+
+  twiml.gather({
+    input: 'speech',
+    action: gatherAction,
+    method: 'POST',
+    language: 'es-AR',
+    speechTimeout: 'auto',
+    timeout: GATHER_TIMEOUT
+  });
+
   return twiml.toString();
 }
 

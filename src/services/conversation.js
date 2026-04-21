@@ -6,11 +6,12 @@ const sessions = new Map();
 
 const TTL_MS = 60 * 60 * 1000; // 1 hora
 
-function create(callSid, debtorInfo, greetingAudioId = null) {
+function create(callSid, debtorInfo, greetingAudioId = null, customSystemPrompt = null) {
   sessions.set(callSid, {
     callSid,
     debtorInfo,           // { name, amount, daysOverdue, accountId }
     greetingAudioId,      // audio pre-generado antes de marcar (null = generar al contestar)
+    customSystemPrompt,   // reemplaza el prompt de cobranzas cuando está presente
     history: [],          // [{ role: 'user'|'assistant', content: string }]
     createdAt: Date.now(),
     lastActivityAt: Date.now(),

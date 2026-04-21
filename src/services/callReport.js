@@ -2,6 +2,7 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 const { sendCallReport } = require('./email');
+const { sendWhatsAppReport } = require('./whatsapp');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -66,7 +67,7 @@ Respondé SOLO con el JSON, sin texto adicional.`;
     };
   }
 
-  await sendCallReport({
+  const reportData = {
     debtorName,
     callSid,
     semaphore: analysis.semaphore,
@@ -74,7 +75,13 @@ Respondé SOLO con el JSON, sin texto adicional.`;
     summary: analysis.summary,
     keyMoments: analysis.keyMoments || [],
     nextAction: analysis.nextAction,
-  });
+  };
+
+  // Email y WhatsApp en paralelo
+  await Promise.allSettled([
+    sendCallReport(reportData),
+    sendWhatsAppReport(reportData),
+  ]);
 }
 
 module.exports = { generateAndSendReport };

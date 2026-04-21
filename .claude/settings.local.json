@@ -12,7 +12,10 @@
       "Bash(python3 -m json.tool)",
       "Bash(node *)",
       "Bash(curl -s -X GET https://api.elevenlabs.io/v1/user -H 'xi-api-key: sk_f73ca2d788a9bd2c7108fec09c5a14c8ddb4cf13b9d5793c')",
-      "Bash(xargs basename *)"
+      "Bash(xargs basename *)",
+      "Bash(curl -s http://localhost:4040/api/tunnels)",
+      "Bash(python3 -c \" import json,sys data = json.load\\(sys.stdin\\) for t in data.get\\('tunnels', []\\): print\\('URL pública:', t['public_url']\\) print\\('Estado: ', t['status']\\) \")",
+      "Bash(curl *)"
     ]
   }
 }

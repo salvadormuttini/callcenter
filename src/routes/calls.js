@@ -80,6 +80,68 @@ router.post('/outbound', async (req, res) => {
 });
 
 /**
+ * POST /api/calls/custom
+ * Llamada con mensaje y comportamiento completamente personalizados.
+ * No usa el prompt de cobranzas — sirve para cualquier tipo de llamada.
+ *
+ * Body:
+ * {
+ *   "to": "+5491156061515",
+ *   "contactName": "Hernán Slemenson",
+ *   "greeting": "Hola Hernán, te llamo de parte de...",
+ *   "systemPrompt": "Sos Cole, asistente de Salvador..."
+ * }
+ */
+router.post('/custom', async (req, res) => {
+  const { to, contactName, greeting, systemPrompt } = req.body;
+
+  if (!to || !greeting || !systemPrompt) {
+    return res.status(400).json({ error: 'Se requieren "to", "greeting" y "systemPrompt"' });
+  }
+
+  if (!to.match(/^\+\d{10,15}$/)) {
+    return res.status(400).json({ error: 'Número en formato E.164 (ej: +5491112345678)' });
+  }
+
+  try {
+    const client = getTwilioClient();
+
+    // Pre-generar el saludo con ElevenLabs antes de marcar
+    let greetingAudioId = null;
+    try {
+      greetingAudioId = await elevenlabs.textToSpeech(greeting);
+      console.log(`[ElevenLabs] Saludo custom pre-generado: ${greetingAudioId}`);
+    } catch (err) {
+      console.warn(`[ElevenLabs] Fallback a Twilio TTS: ${err.message}`);
+    }
+
+    const call = await client.calls.create({
+      to,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      url: `${BASE_URL}/voice/incoming`,
+      statusCallback: `${BASE_URL}/voice/status`,
+      statusCallbackMethod: 'POST',
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      timeout: 30,
+    });
+
+    conversation.create(
+      call.sid,
+      { name: contactName || 'Contacto' },
+      greetingAudioId,
+      systemPrompt
+    );
+
+    console.log(`[Twilio] Llamada custom iniciada a ${to}. SID: ${call.sid}`);
+
+    res.json({ success: true, callSid: call.sid, status: call.status, to, contact: contactName });
+  } catch (err) {
+    console.error('[Twilio] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /api/calls/:callSid
  * Consulta el estado de una llamada.
  */

@@ -8,7 +8,12 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // Detecta fin de oración: . ! ? seguido de espacio (o fin de string)
 const SENTENCE_END = /^(.*?[.!?])\s/;
 
-function buildSystem(debtorInfo) {
+function buildSystem(debtorInfo, customSystemPrompt = null) {
+  // Si hay prompt custom, lo usa directamente (llamadas no-cobranzas)
+  if (customSystemPrompt) {
+    return [{ type: 'text', text: customSystemPrompt }];
+  }
+
   const ctx = debtorInfo
     ? [
         '=== INFORMACIÓN DEL DEUDOR ===',
@@ -30,11 +35,11 @@ function buildSystem(debtorInfo) {
  * Devuelve el texto completo al terminar.
  * Latencia al primer onSentence(): ~200-400ms con Haiku.
  */
-async function streamBySentence(history, debtorInfo, onSentence) {
+async function streamBySentence(history, debtorInfo, onSentence, customSystemPrompt = null) {
   const stream = client.messages.stream({
     model: 'claude-haiku-4-5',
     max_tokens: 120,
-    system: buildSystem(debtorInfo),
+    system: buildSystem(debtorInfo, customSystemPrompt),
     messages: history,
   });
 

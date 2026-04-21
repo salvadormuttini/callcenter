@@ -76,14 +76,14 @@ function createStreamingToken(callSid, session) {
             console.log(`[${callSid}] 1ª frase (${Date.now() - t0}ms): "${sentence}"`);
             firstSentence = false;
           }
-          // Pipa cada frase a medida que llega — sin esperar las siguientes
           const audioStream = await elevenlabs.streamTextToSpeech(sentence);
           await new Promise((resolve, reject) => {
             audioStream.pipe(passThrough, { end: false });
             audioStream.on('end', resolve);
             audioStream.on('error', reject);
           });
-        }
+        },
+        session.customSystemPrompt || null
       );
 
       console.log(`[${callSid}] Cole completo (${Date.now() - t0}ms): "${fullReply}"`);

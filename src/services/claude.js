@@ -77,6 +77,7 @@ async function getResponse(history, debtorInfo) {
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',
     temperature: 0.7,
+    stop_sequences: ['\n\n'],
     max_tokens: 80,
     system: buildSystem(debtorInfo),
     messages: history,

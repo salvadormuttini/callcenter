@@ -29,16 +29,16 @@ setInterval(() => {
 
 function buildGatherTwiml(audioUrl, gatherAction) {
   const twiml = new twilio.twiml.VoiceResponse();
-  twiml.play(audioUrl);                     // Cole habla completo
-  twiml.gather({                             // Luego escucha
-    input: 'speech',
-    action: gatherAction,
-    method: 'POST',
-    language: 'es-AR',
-    speechTimeout: 'auto',
-    timeout: GATHER_TIMEOUT,
-  });
-  twiml.redirect({ method: 'POST' }, `${gatherAction}?timeout=1`);
+  const gather = twiml.gather({
+  input: 'speech',
+  action: gatherAction,
+  method: 'POST',
+  language: 'es-AR',
+  speechTimeout: 'auto',
+  timeout: GATHER_TIMEOUT,
+});
+
+gather.play(audioUrl);
   return twiml.toString();
 }
 

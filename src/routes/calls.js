@@ -46,7 +46,7 @@ router.post('/outbound', async (req, res) => {
     const greeting = GREETING_TEMPLATE(debtor.name);
     let greetingAudioId = null;
     try {
-      greetingAudioId = await elevenlabs.textToSpeech(greeting);
+      greetingAudioId = await elevenlabs.textToSpeech(greeting);;
       console.log(`[ElevenLabs] Saludo pre-generado: ${greetingAudioId}`);
     } catch (err) {
       console.warn(`[ElevenLabs] No se pudo pre-generar saludo (fallback a Twilio TTS): ${err.message}`);
@@ -95,9 +95,12 @@ router.post('/outbound', async (req, res) => {
 router.post('/custom', async (req, res) => {
   const { to, contactName, greeting, systemPrompt } = req.body;
 
-  if (!to || !greeting || !systemPrompt) {
-    return res.status(400).json({ error: 'Se requieren "to", "greeting" y "systemPrompt"' });
-  }
+  if (!to) {
+  return res.status(400).json({ error: 'Se requiere "to"' });
+}
+
+const finalGreeting = greeting || `Hola ${contactName || '¿cómo estás?'}`;
+const finalSystemPrompt = systemPrompt || 'Sos un asistente amable y conversacional.';
 
   if (!to.match(/^\+\d{10,15}$/)) {
     return res.status(400).json({ error: 'Número en formato E.164 (ej: +5491112345678)' });
@@ -109,7 +112,7 @@ router.post('/custom', async (req, res) => {
     // Pre-generar el saludo con ElevenLabs antes de marcar
     let greetingAudioId = null;
     try {
-      greetingAudioId = await elevenlabs.textToSpeech(greeting);
+      greetingAudioId = await elevenlabs.textToSpeech(finalGreeting);
       console.log(`[ElevenLabs] Saludo custom pre-generado: ${greetingAudioId}`);
     } catch (err) {
       console.warn(`[ElevenLabs] Fallback a Twilio TTS: ${err.message}`);
@@ -129,7 +132,7 @@ router.post('/custom', async (req, res) => {
       call.sid,
       { name: contactName || 'Contacto' },
       greetingAudioId,
-      systemPrompt
+      finalSystemPrompt
     );
 
     console.log(`[Twilio] Llamada custom iniciada a ${to}. SID: ${call.sid}`);

@@ -7,16 +7,17 @@ let transporter = null;
 function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  connectionTimeout: 10000,
-  socketTimeout: 15000,
-});
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+      connectionTimeout: 10000,
+      socketTimeout: 15000,
+    });
+  }
   return transporter;
 }
 
@@ -27,11 +28,11 @@ async function sendCallReport(report) {
     debtorName,
     callSid,
     duration,
-    semaphore,     // 'verde' | 'amarillo' | 'rojo'
-    result,        // una línea: "Acordó pago parcial para el viernes"
-    summary,       // 2-3 oraciones del desarrollo
-    keyMoments,    // array de strings
-    nextAction,    // qué hacer después
+    semaphore,
+    result,
+    summary,
+    keyMoments,
+    nextAction,
   } = report;
 
   const emoji = SEMAPHORE_EMOJI[semaphore] || '⚪';
@@ -106,12 +107,12 @@ async function sendCallReport(report) {
 </body>
 </html>`;
 
-await getTransporter().sendMail({
-  from: `"Cole Call Center" <${process.env.GMAIL_USER}>`,
-  to: process.env.REPORT_EMAIL || 'salvadormuttini@gmail.com',
-  subject: `${emoji} Llamada: ${debtorName} — ${result}`,
-  html,
-});
+  await getTransporter().sendMail({
+    from: `"Cole Call Center" <${process.env.GMAIL_USER}>`,
+    to: process.env.REPORT_EMAIL || 'salvadormuttini@gmail.com',
+    subject: `${emoji} Llamada: ${debtorName} — ${result}`,
+    html,
+  });
 
   console.log(`[Email] Reporte enviado para ${debtorName} (${semaphore})`);
 }

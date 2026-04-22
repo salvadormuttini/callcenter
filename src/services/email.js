@@ -10,7 +10,7 @@ function getTransporter() {
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
-family: 4,
+      family: 4,
       auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD,
@@ -19,6 +19,7 @@ family: 4,
       socketTimeout: 15000,
     });
   }
+
   return transporter;
 }
 
@@ -109,13 +110,13 @@ async function sendCallReport(report) {
 </html>`;
 
   await getTransporter().sendMail({
-    from: `"Cole Call Center" <${process.env.GMAIL_USER}>`,
+    from: \`"Cole Call Center" <${process.env.GMAIL_USER}>\`,
     to: process.env.REPORT_EMAIL || 'salvadormuttini@gmail.com',
-    subject: `${emoji} Llamada: ${debtorName} — ${result}`,
+    subject: \`${emoji} Llamada: ${debtorName} — ${result}\`,
     html,
   });
 
-  console.log(`[Email] Reporte enviado para ${debtorName} (${semaphore})`);
+  console.log(\`[Email] Reporte enviado para ${debtorName} (${semaphore})\`);
 }
 
 module.exports = { sendCallReport };

@@ -103,9 +103,6 @@ async function sendCallReport(report) {
 </body>
 </html>`;
 
-  await getTransporter().verify();
-console.log('[Email] transporter OK');
-
 await getTransporter().sendMail({
   from: `"Cole Call Center" <${process.env.GMAIL_USER}>`,
   to: process.env.REPORT_EMAIL || 'salvadormuttini@gmail.com',

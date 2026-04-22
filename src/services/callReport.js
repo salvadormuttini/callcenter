@@ -80,7 +80,8 @@ console.log('[Report] Claude respondió');
   };
 
   // Email y WhatsApp en paralelo
-  const [emailResult, whatsappResult] = await Promise.allSettled([sendCallReport(reportData), sendWhatsAppReport(reportData)]);
+console.log('[Report] entrando a envío');  
+const [emailResult, whatsappResult] = await Promise.allSettled([sendCallReport(reportData), sendWhatsAppReport(reportData)]);
 console.log('[Report] EMAIL:', emailResult.status, emailResult.reason?.message || 'OK');
 console.log('[Report] WHATSAPP:', whatsappResult.status, whatsappResult.reason?.message || 'OK');
 }

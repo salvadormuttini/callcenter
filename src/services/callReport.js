@@ -43,11 +43,13 @@ ${turns}
 
 Respondé SOLO con el JSON, sin texto adicional.`;
 
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 512,
-    messages: [{ role: 'user', content: prompt }],
-  });
+ console.log('[Report] pidiendo análisis a Claude');
+const response = await client.messages.create({
+  model: 'claude-haiku-4-5',
+  max_tokens: 512,
+  messages: [{ role: 'user', content: prompt }],
+});
+console.log('[Report] Claude respondió');
 
   const raw = response.content.find(b => b.type === 'text')?.text || '{}';
 

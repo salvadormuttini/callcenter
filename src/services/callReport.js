@@ -69,7 +69,8 @@ console.log('[Report] Claude respondió');
     };
   }
 
-  const reportData = {
+console.log('[Report] armando reportData');  
+const reportData = {
     debtorName,
     callSid,
     semaphore: analysis.semaphore,

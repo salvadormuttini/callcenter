@@ -109,14 +109,14 @@ async function sendCallReport(report) {
 </body>
 </html>`;
 
-  await getTransporter().sendMail({
-    from: \`"Cole Call Center" <${process.env.GMAIL_USER}>\`,
+      await getTransporter().sendMail({
+    from: `"Cole Call Center" <${process.env.GMAIL_USER}>`,
     to: process.env.REPORT_EMAIL || 'salvadormuttini@gmail.com',
-    subject: \`${emoji} Llamada: ${debtorName} — ${result}\`,
+    subject: `${emoji} Llamada: ${debtorName} — ${result}`,
     html,
   });
 
-  console.log(\`[Email] Reporte enviado para ${debtorName} (${semaphore})\`);
+  console.log(`[Email] Reporte enviado para ${debtorName} (${semaphore})`);
 }
 
 module.exports = { sendCallReport };

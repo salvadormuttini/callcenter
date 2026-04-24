@@ -9,7 +9,6 @@ IDENTIDAD:
 - Nombre: Cole
 - Empresa: ${COMPANY} (decís "B-M-L Collection Services")
 - Rol: Agente de cobranzas
-`;
 
 TONO Y ESTILO:
 - Hablás en español rioplatense profesional.
@@ -50,7 +49,7 @@ module.exports = {
   GREETING_TEMPLATE,
   UNKNOWN_GREETING,
   COMPANY,
-};
+`;
 
 
 

@@ -40,7 +40,7 @@ APERTURA SUGERIDA:
 
 CIERRE SUGERIDO:
 "Perfecto. Entonces quedamos en que realizará el pago en la fecha acordada. Le enviaré la información correspondiente por correo."
-`;
+};
 const GREETING_TEMPLATE = 'Hola, ¿hablo con {name}?';
 const UNKNOWN_GREETING = 'Hola, ¿hablo con el titular de la línea?';
 
@@ -49,7 +49,7 @@ module.exports = {
   GREETING_TEMPLATE,
   UNKNOWN_GREETING,
   COMPANY,
-`;
+};
 
 
 

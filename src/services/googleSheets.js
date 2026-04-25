@@ -34,15 +34,25 @@ async function appendCallReport(reportData) {
 
   console.log('[Sheets] Iniciando append de reporte');
   console.log(`[Sheets] Target spreadsheetId=${spreadsheetId} range=${range}`);
+  console.log('[Sheets] credentialsJson length:', credentialsJson?.length || 0);
+  console.log('[Sheets] GOOGLE_SHEETS_SPREADSHEET_ID:', spreadsheetId);
 
   try {
     const credentials = JSON.parse(credentialsJson);
+    console.log('[Sheets] Credentials parsed OK');
+    console.log('[Sheets] private_key starts with:', credentials.private_key?.substring(0, 50));
+
     credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    console.log('[Sheets] private_key normalized');
+
     const auth = new google.auth.GoogleAuth({
       credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
+    console.log('[Sheets] GoogleAuth created');
+
     const sheets = google.sheets({ version: 'v4', auth });
+    console.log('[Sheets] Sheets client initialized');
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -51,13 +61,14 @@ async function appendCallReport(reportData) {
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: [buildRow(reportData)] },
     });
+    console.log('[Sheets] Append OK, response.updates:', response?.data?.updates);
 
     const updates = response.data?.updates || {};
     console.log(`[Sheets] Append OK | updatedRange=${updates.updatedRange || 'N/A'} | updatedRows=${updates.updatedRows || 0}`);
     return { ok: true, updates };
   } catch (err) {
-    console.error('[Sheets] Append ERROR:', err?.message || err);
-    if (err?.stack) console.error('[Sheets] Stack:', err.stack);
+    console.error('[Sheets] Append ERROR:', err.code || err.message);
+    console.error('[Sheets] Full error:', JSON.stringify(err, null, 2));
     throw err;
   }
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-const { DeepgramClient } = require('@deepgram/sdk');
+const { DeepgramClient, LiveTranscriptionEvents } = require('@deepgram/sdk');
 
 function createSTTStream({ onTranscript, onSpeechStart, onError }) {
   const client = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY });
@@ -32,7 +32,7 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
     }
   }
 
-  const connPromise = client.listen.v1.connect({
+  const connPromise = client.listen.live({
     model: 'nova-2',
     language: 'es-419',
     encoding: 'mulaw',
@@ -41,57 +41,40 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
     punctuate: true,
     interim_results: false,
     endpointing: 300,
-    Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
   });
 
   connPromise.then((conn) => {
     connRef = conn;
 
-    conn.on('open', () => {
+    conn.on(LiveTranscriptionEvents.Open, () => {
       isOpen = true;
       console.log('[Deepgram] STT conectado');
       flushPendingAudio();
     });
 
-    conn.on('message', (data) => {
-      deepgramMessages += 1;
-      if (typeof data === 'string') data = JSON.parse(data);
-      if (Buffer.isBuffer(data)) data = JSON.parse(data.toString());
-      if (!loggedRawMessage) {
-        console.log('[Deepgram raw]', data);
-        loggedRawMessage = true;
-      }
-      console.log(`[Deepgram] mensaje #${deepgramMessages} | type=${data?.type || 'unknown'}`);
-
-      const messageType = String(data?.type || '').toLowerCase();
-      if (messageType === 'results') {
-        const text = (
-          data?.channel?.alternatives?.[0]?.transcript ||
-          data?.result?.channel?.alternatives?.[0]?.transcript ||
-          data?.results?.channels?.[0]?.alternatives?.[0]?.transcript ||
-          data?.results?.channels?.[0]?.alternatives?.[0]?.paragraphs?.transcript ||
-          ''
-        ).trim();
-
-        const isFinal = data?.is_final === true || data?.speech_final === true || data?.from_finalize === true;
-        if (text) onTranscript(text);
-      } else if (messageType === 'speechstarted') {
-        if (onSpeechStart) onSpeechStart();
-      }
+    conn.on(LiveTranscriptionEvents.Transcript, (data) => {
+      const transcript = data?.channel?.alternatives?.[0]?.transcript || '';
+      const text = transcript.trim();
+      const isFinal = data?.is_final === true;
+      console.log(`[Deepgram] transcript | isFinal=${isFinal} | text="${text}"`);
+      if (text) onTranscript(text);
     });
 
-    conn.on('error', (err) => {
-      console.error('[Deepgram] Error:', err?.message || err);
-      if (onError) onError(err);
+    conn.on(LiveTranscriptionEvents.SpeechStarted, () => {
+      console.log('[Deepgram] SpeechStarted');
+      if (onSpeechStart) onSpeechStart();
     });
 
-    conn.on('close', () => {
+    conn.on(LiveTranscriptionEvents.Error, (error) => {
+      console.error('[Deepgram] Error:', error);
+      if (onError) onError(error);
+    });
+
+    conn.on(LiveTranscriptionEvents.Close, () => {
       isOpen = false;
       isClosed = true;
       console.log('[Deepgram] STT desconectado');
     });
-
-    conn.connect();
   }).catch((err) => {
     isClosed = true;
     pendingAudio.length = 0;

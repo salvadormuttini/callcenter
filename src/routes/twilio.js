@@ -38,11 +38,13 @@ function buildGatherTwiml(audioUrl, gatherAction) {
     action: gatherAction,
     method: 'POST',
     language: 'es-AR',
-    speechTimeout: 'auto',
+    speechTimeout: 1,          // corta 1s después de que el usuario deja de hablar
+    speechModel: 'phone_call', // modelo optimizado para telefonía → STT más rápido
     timeout: GATHER_TIMEOUT,
+    actionOnEmptyResult: true, // manda webhook aunque no haya speech (detecta barge-in vacío)
   });
 
-  gather.play(audioUrl);
+  gather.play(audioUrl);       // <Play> dentro de <Gather> = barge-in automático
 
   return twiml.toString();
 }
@@ -57,8 +59,10 @@ function buildFallbackTwiml(text, gatherAction) {
     action: gatherAction,
     method: 'POST',
     language: 'es-AR',
-    speechTimeout: 'auto',
-    timeout: GATHER_TIMEOUT
+    speechTimeout: 1,
+    speechModel: 'phone_call',
+    timeout: GATHER_TIMEOUT,
+    actionOnEmptyResult: true,
   });
 
   return twiml.toString();
@@ -71,7 +75,7 @@ function buildFallbackTwiml(text, gatherAction) {
  * En background: Claude streaming frase por frase → ElevenLabs → PassThrough.
  * Twilio puede empezar a descargar /audio/live/:token sin esperar nada.
  */
-function createStreamingToken(callSid, session) {
+function createStreamingToken(callSid, session, t_webhook = Date.now()) {
   const token = uuidv4();
   const passThrough = new PassThrough();
   pendingStreams.set(token, { stream: passThrough, createdAt: Date.now() });
@@ -86,7 +90,7 @@ function createStreamingToken(callSid, session) {
         session.debtorInfo,
         async (sentence) => {
           if (firstSentence) {
-            console.log(`[${callSid}] 1ª frase (${Date.now() - t0}ms): "${sentence}"`);
+            console.log(`[${callSid}] 1ª frase | webhook→audio: ${Date.now() - t_webhook}ms | claude→frase: ${Date.now() - t0}ms | "${sentence}"`);
             firstSentence = false;
           }
           const audioStream = await elevenlabs.streamTextToSpeech(sentence);
@@ -208,6 +212,7 @@ router.post('/respond', (req, res) => {
     );
   }
 
+  const t_webhook = Date.now();
   console.log(`[${callSid}] Deudor: "${speechResult}"`);
 
   // Cancelar stream anterior si el usuario interrumpió a Cole
@@ -220,15 +225,13 @@ router.post('/respond', (req, res) => {
 
   conversation.addTurn(callSid, 'user', speechResult);
 
-  // 1. Registrar PassThrough ANTES de responder — Twilio puede conectar inmediatamente
-  const token = createStreamingToken(callSid, session);
+  // Prefetch: Claude arranca en background ANTES de que Twilio reciba el TwiML
+  const token = createStreamingToken(callSid, session, t_webhook);
   activeTokens.set(callSid, token);
   const audioUrl = `${BASE_URL}/voice/audio/live/${token}`;
 
-  // 2. Devolver TwiML al instante
   res.type('text/xml').send(buildGatherTwiml(audioUrl, gatherAction));
-
-  // 3. El background ya está corriendo: Claude streaming → ElevenLabs → PassThrough
+  // Claude streaming → ElevenLabs → PassThrough corre en paralelo desde arriba
 });
 
 // ─── Estado ───────────────────────────────────────────────────────────────────

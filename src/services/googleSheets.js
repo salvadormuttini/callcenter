@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const { google } = require('googleapis');
 
 function getSheetsConfig() {
@@ -25,7 +26,17 @@ function buildRow(reportData) {
 }
 
 async function appendCallReport(reportData) {
-  const { credentialsJson, spreadsheetId, range } = getSheetsConfig();
+  const { spreadsheetId, range } = getSheetsConfig();
+  let credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!credentialsJson) {
+    try {
+      credentialsJson = fs.readFileSync('./google-credentials.json', 'utf8');
+      console.log('[Sheets] Loaded credentials from file');
+    } catch (e) {
+      console.error('[Sheets] Could not read google-credentials.json:', e.message);
+      throw new Error('No GOOGLE_SERVICE_ACCOUNT_JSON env var or google-credentials.json file');
+    }
+  }
 
   if (!credentialsJson || !spreadsheetId) {
     console.warn('[Sheets] Omitido: faltan GOOGLE_SERVICE_ACCOUNT_JSON o GOOGLE_SHEETS_SPREADSHEET_ID');

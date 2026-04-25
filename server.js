@@ -50,6 +50,29 @@ app.get('/debug/routes-version', (req, res) => {
   res.json({ ok: true, version: 'v1', time: new Date().toISOString() });
 });
 
+app.get('/api/test/sheets', async (req, res) => {
+  try {
+    const { appendCallReport } = require('./src/services/googleSheets');
+
+    await appendCallReport({
+      nombre: 'TEST',
+      telefono: '000',
+      monto: 100,
+      resultado: 'TEST',
+      montoAcordado: 0,
+      fechaCompromiso: '',
+      email: '',
+      notas: 'test desde endpoint'
+    });
+
+    console.log('[Sheets TEST] OK');
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[Sheets TEST ERROR]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use('/api/calls', callsRoutes);
 
 app.get('/health', (req, res) => {

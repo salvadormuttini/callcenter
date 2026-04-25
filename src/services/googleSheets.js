@@ -42,8 +42,9 @@ async function appendCallReport(reportData) {
     console.log('[Sheets] Credentials parsed OK');
     console.log('[Sheets] private_key starts with:', credentials.private_key?.substring(0, 50));
 
-    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    credentials.private_key = credentials.private_key.replace(/\\\\n/g, '\n');
     console.log('[Sheets] private_key normalized');
+    console.log('[Sheets] private_key has real newlines:', credentials.private_key.includes('\n'));
 
     const auth = new google.auth.GoogleAuth({
       credentials,

@@ -1,5 +1,7 @@
 'use strict';
 
+if (!process.env.NODE_OPTIONS) process.env.NODE_OPTIONS = '--openssl-legacy-provider';
+
 const fs = require('fs');
 const { google } = require('googleapis');
 

@@ -44,6 +44,10 @@ const twilioRoutes = require('./src/routes/twilio');
 const callsRoutes  = require('./src/routes/calls');
 
 app.use('/voice', twilioRoutes);
+app.get('/debug/routes-version', (req, res) => {
+  res.json({ ok: true, version: 'v1', time: new Date().toISOString() });
+});
+
 app.use('/api/calls', callsRoutes);
 
 app.get('/health', (req, res) => {

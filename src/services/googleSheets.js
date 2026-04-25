@@ -36,8 +36,10 @@ async function appendCallReport(reportData) {
   console.log(`[Sheets] Target spreadsheetId=${spreadsheetId} range=${range}`);
 
   try {
+    const credentials = JSON.parse(credentialsJson);
+    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
     const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(credentialsJson),
+      credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
     const sheets = google.sheets({ version: 'v4', auth });

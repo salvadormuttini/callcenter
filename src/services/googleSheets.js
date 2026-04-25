@@ -2,15 +2,18 @@
 
 const { google } = require('googleapis');
 
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
-/**
- * Builds a Google Sheets client using GOOGLE_APPLICATION_CREDENTIALS
- * (set automatically by scripts/setup-credentials.js at startup).
- * No manual JSON parsing or private_key escaping needed.
- */
 function buildSheetsClient() {
-  const auth = new google.auth.GoogleAuth({ scopes: SCOPES });
+  const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!credentialsJson) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not set');
+
+  const credentials = JSON.parse(credentialsJson);
+  credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
   return google.sheets({ version: 'v4', auth });
 }
 

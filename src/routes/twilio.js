@@ -1,255 +1,40 @@
 'use strict';
 
-const express = require('express');
-const router = express.Router();
-const twilio = require('twilio');
-const { PassThrough } = require('stream');
-const { v4: uuidv4 } = require('uuid');
+const express  = require('express');
+const router   = express.Router();
+const twilio   = require('twilio');
 const conversation = require('../services/conversation');
-const claude = require('../services/claude');
-const elevenlabs = require('../services/elevenlabs');
 const { generateAndSendReport } = require('../services/callReport');
-const { GREETING_TEMPLATE, UNKNOWN_GREETING } = require('../config/valentina');
 
 const BASE_URL = process.env.BASE_URL;
-const GATHER_TIMEOUT = 15;
+const WS_URL   = BASE_URL.replace(/^https?:\/\//, 'wss://') + '/voice/stream';
 
-// Streams activos: token → PassThrough registrado antes de que lleguen datos.
-// Twilio empieza a descargar inmediatamente — no necesita polling.
-const pendingStreams = new Map();
+// ─── /incoming — devuelve TwiML para conectar el Media Stream ─────────────────
 
-// Último token activo por callSid — para cancelar cuando el usuario interrumpe.
-const activeTokens = new Map();
-
-setInterval(() => {
-  const cutoff = Date.now() - 3 * 60 * 1000;
-  for (const [t, e] of pendingStreams) {
-    if (e.createdAt < cutoff) { e.stream.destroy(); pendingStreams.delete(t); }
-  }
-}, 60 * 1000);
-
-// ─── TwiML ───────────────────────────────────────────────────────────────────
-
-function buildGatherTwiml(audioUrl, gatherAction) {
-  const twiml = new twilio.twiml.VoiceResponse();
-
-  const gather = twiml.gather({
-    input: 'speech',
-    action: gatherAction,
-    method: 'POST',
-    language: 'es-AR',
-    speechTimeout: 1,          // corta 1s después de que el usuario deja de hablar
-    speechModel: 'phone_call', // modelo optimizado para telefonía → STT más rápido
-    timeout: GATHER_TIMEOUT,
-    actionOnEmptyResult: true, // manda webhook aunque no haya speech (detecta barge-in vacío)
-  });
-
-  gather.play(audioUrl);       // <Play> dentro de <Gather> = barge-in automático
-
-  return twiml.toString();
-}
-
-function buildFallbackTwiml(text, gatherAction) {
-  const twiml = new twilio.twiml.VoiceResponse();
-
-  twiml.say({ language: 'es-AR', voice: 'Polly.Lupe' }, text);
-
-  twiml.gather({
-    input: 'speech',
-    action: gatherAction,
-    method: 'POST',
-    language: 'es-AR',
-    speechTimeout: 1,
-    speechModel: 'phone_call',
-    timeout: GATHER_TIMEOUT,
-    actionOnEmptyResult: true,
-  });
-
-  return twiml.toString();
-}
-
-// ─── Core: frase por frase → PassThrough ─────────────────────────────────────
-
-/**
- * Crea un PassThrough y lo registra inmediatamente.
- * En background: Claude streaming frase por frase → ElevenLabs → PassThrough.
- * Twilio puede empezar a descargar /audio/live/:token sin esperar nada.
- */
-function createStreamingToken(callSid, session, t_webhook = Date.now()) {
-  const token = uuidv4();
-  const passThrough = new PassThrough();
-  pendingStreams.set(token, { stream: passThrough, createdAt: Date.now() });
-
-  const t0 = Date.now();
-  let firstSentence = true;
-
-  ;(async () => {
-    try {
-      const fullReply = await claude.streamBySentence(
-        session.history,
-        session.debtorInfo,
-        async (sentence) => {
-          if (firstSentence) {
-            console.log(`[${callSid}] 1ª frase | webhook→audio: ${Date.now() - t_webhook}ms | claude→frase: ${Date.now() - t0}ms | "${sentence}"`);
-            firstSentence = false;
-          }
-          const audioStream = await elevenlabs.streamTextToSpeech(sentence);
-          await new Promise((resolve, reject) => {
-            audioStream.pipe(passThrough, { end: false });
-            audioStream.on('end', resolve);
-            audioStream.on('error', reject);
-          });
-        },
-        session.customSystemPrompt || null
-      );
-
-      console.log(`[${callSid}] Cole completo (${Date.now() - t0}ms): "${fullReply}"`);
-      conversation.addTurn(callSid, 'assistant', fullReply);
-      passThrough.end();
-    } catch (err) {
-      console.error(`[${callSid}] Error stream:`, err.message);
-      passThrough.destroy(err);
-    }
-  })();
-
-  return token;
-}
-
-/**
- * Crea un token de stream para texto estático (silencio/error).
- * Sin Claude — va directo a ElevenLabs.
- */
-function createStaticToken(callSid, text) {
-  const token = uuidv4();
-  const passThrough = new PassThrough();
-  pendingStreams.set(token, { stream: passThrough, createdAt: Date.now() });
-
-  ;(async () => {
-    try {
-      const audioStream = await elevenlabs.streamTextToSpeech(text);
-      audioStream.pipe(passThrough);
-    } catch (err) {
-      console.error(`[${callSid}] Error static stream:`, err.message);
-      // Fallback silencioso — passThrough queda vacío, Twilio avanza al Gather
-      passThrough.end();
-    }
-  })();
-
-  return token;
-}
-
-// ─── Endpoint de audio en vivo ────────────────────────────────────────────────
-
-router.get('/audio/live/:token', (req, res) => {
-  const entry = pendingStreams.get(req.params.token);
-  if (!entry) return res.status(404).send('Token expirado');
-
-  res.setHeader('Content-Type', 'audio/mpeg');
-  res.setHeader('Transfer-Encoding', 'chunked');
-  entry.stream.pipe(res);
-  entry.stream.on('end', () => pendingStreams.delete(req.params.token));
-  entry.stream.on('error', () => { res.end(); pendingStreams.delete(req.params.token); });
-});
-
-// ─── Inicio de llamada ────────────────────────────────────────────────────────
-
-router.post('/incoming', async (req, res) => {
+router.post('/incoming', (req, res) => {
   const callSid = req.body.CallSid;
-  console.log(`[Twilio] Nueva llamada: ${callSid}`);
-  const gatherAction = `${BASE_URL}/voice/respond`;
+  console.log(`[Twilio] Llamada entrante: ${callSid} → conectando Media Stream`);
 
-  try {
-    const session = conversation.get(callSid);
-    const debtorName = session?.debtorInfo?.name;
-    const greeting = debtorName ? GREETING_TEMPLATE(debtorName) : UNKNOWN_GREETING;
+  const twiml = new twilio.twiml.VoiceResponse();
+  const connect = twiml.connect();
+  connect.stream({ url: WS_URL });
 
-    if (!session) conversation.create(callSid, null);
-    conversation.addTurn(callSid, 'assistant', greeting);
-
-    // Saludo pre-generado (archivo estático) → latencia cero
-    if (session?.greetingAudioId) {
-      const audioUrl = `${BASE_URL}/audio/${session.greetingAudioId}.mp3`;
-      console.log(`[${callSid}] Saludo pre-generado`);
-      return res.type('text/xml').send(buildGatherTwiml(audioUrl, gatherAction));
-    }
-
-    // Sin pre-generado: streaming del saludo
-    const token = createStaticToken(callSid, greeting);
-    return res.type('text/xml').send(
-      buildGatherTwiml(`${BASE_URL}/voice/audio/live/${token}`, gatherAction)
-    );
-
-  } catch (err) {
-    console.error(`[${callSid}] /incoming error:`, err.message);
-    res.type('text/xml').send(
-      buildFallbackTwiml('Hubo un error. Intente más tarde.', gatherAction)
-    );
-  }
+  res.type('text/xml').send(twiml.toString());
 });
 
-// ─── Turno del deudor ─────────────────────────────────────────────────────────
-
-router.post('/respond', (req, res) => {
-  const callSid = req.body.CallSid;
-  const speechResult = req.body.SpeechResult || '';
-  const isTimeout = req.query.timeout === '1';
-  const gatherAction = `${BASE_URL}/voice/respond`;
-
-  const session = conversation.get(callSid);
-
-  if (!session) {
-    const twiml = new twilio.twiml.VoiceResponse();
-    twiml.say({ language: 'es-AR' }, 'Error técnico. ¡Hasta luego!');
-    twiml.hangup();
-    return res.type('text/xml').send(twiml.toString());
-  }
-
-  // Silencio / timeout — respuesta rápida sin Claude
-  if (isTimeout || !speechResult.trim()) {
-    const token = createStaticToken(callSid, '¿Seguís ahí? ¿Me escuchás?');
-    return res.type('text/xml').send(
-      buildGatherTwiml(`${BASE_URL}/voice/audio/live/${token}`, gatherAction)
-    );
-  }
-
-  const t_webhook = Date.now();
-  console.log(`[${callSid}] Deudor: "${speechResult}"`);
-
-  // Cancelar stream anterior si el usuario interrumpió a Cole
-  const prevToken = activeTokens.get(callSid);
-  if (prevToken) {
-    const prev = pendingStreams.get(prevToken);
-    if (prev) { prev.stream.destroy(); pendingStreams.delete(prevToken); }
-    activeTokens.delete(callSid);
-  }
-
-  conversation.addTurn(callSid, 'user', speechResult);
-
-  // Prefetch: Claude arranca en background ANTES de que Twilio reciba el TwiML
-  const token = createStreamingToken(callSid, session, t_webhook);
-  activeTokens.set(callSid, token);
-  const audioUrl = `${BASE_URL}/voice/audio/live/${token}`;
-
-  res.type('text/xml').send(buildGatherTwiml(audioUrl, gatherAction));
-  // Claude streaming → ElevenLabs → PassThrough corre en paralelo desde arriba
-});
-
-// ─── Estado ───────────────────────────────────────────────────────────────────
+// ─── /status — webhook de estado de Twilio (sin cambios) ─────────────────────
 
 router.post('/status', (req, res) => {
   const { CallSid, CallStatus, CallDuration } = req.body;
   console.log(`[Twilio] ${CallSid}: ${CallStatus}`);
 
   if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(CallStatus)) {
-    activeTokens.delete(CallSid);
-console.log(`[${CallSid}] STATUS HOOK ENTRÓ`);
     const s = conversation.get(CallSid);
     if (s) {
       console.log(`[${CallSid}] ${s.history.length} turnos — generando reporte`);
-
       generateAndSendReport(s, CallSid, CallStatus, CallDuration)
         .then(() => { console.log(`[${CallSid}] REPORTE OK`); conversation.destroy(CallSid); })
-        .catch(err => { console.error(`[${CallSid}] REPORTE ERROR`, err.message); console.error(err.stack); conversation.destroy(CallSid); });
+        .catch(err => { console.error(`[${CallSid}] REPORTE ERROR:`, err.message); conversation.destroy(CallSid); });
     }
   }
 

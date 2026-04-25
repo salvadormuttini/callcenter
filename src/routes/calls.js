@@ -42,16 +42,6 @@ router.post('/outbound', async (req, res) => {
   try {
     const client = getTwilioClient();
 
-    // Pre-generar el saludo ANTES de marcar → 0 latencia al contestar
-    const greeting = GREETING_TEMPLATE(debtor.name);
-    let greetingAudioId = null;
-    try {
-      greetingAudioId = await elevenlabs.textToSpeech(greeting);;
-      console.log(`[ElevenLabs] Saludo pre-generado: ${greetingAudioId}`);
-    } catch (err) {
-      console.warn(`[ElevenLabs] No se pudo pre-generar saludo (fallback a Twilio TTS): ${err.message}`);
-    }
-
     const call = await client.calls.create({
       to,
       from: process.env.TWILIO_PHONE_NUMBER,
@@ -62,8 +52,8 @@ router.post('/outbound', async (req, res) => {
       timeout: 30,
     });
 
-    // Registrar sesión con saludo ya listo
-    conversation.create(call.sid, debtor, greetingAudioId);
+    // El saludo lo genera el WebSocket handler al conectar
+    conversation.create(call.sid, debtor);
     console.log(`[Twilio] Llamada iniciada a ${to}. SID: ${call.sid}`);
 
     res.json({

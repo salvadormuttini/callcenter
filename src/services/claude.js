@@ -51,7 +51,7 @@ function buildSystem(debtorInfo, customSystemPrompt = null) {
         '=== INFORMACIÓN DEL DEUDOR ===',
         `Nombre: ${debtorInfo.name || 'Desconocido'}`,
         `Cuenta: ${debtorInfo.accountId || 'N/A'}`,
-        `Monto: ${amountToWords(debtorInfo.amount || 0)} pesos argentinos`,
+        `Monto: ${amountToWords(debtorInfo.amount || 0)} pesos`,
         `Mora: ${debtorInfo.daysOverdue || 0} días`,
       ].join('\n')
     : 'Sin datos del deudor.';
@@ -70,7 +70,7 @@ function buildSystem(debtorInfo, customSystemPrompt = null) {
 async function streamBySentence(history, debtorInfo, onSentence, customSystemPrompt = null) {
   const stream = client.messages.stream({
     model: 'claude-haiku-4-5',
-    max_tokens: 80,
+    max_tokens: 60,
     system: buildSystem(debtorInfo, customSystemPrompt),
     messages: history,
   });

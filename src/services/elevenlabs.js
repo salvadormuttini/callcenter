@@ -81,4 +81,28 @@ async function textToSpeech(text) {
   return audioId;
 }
 
-module.exports = { streamTextToSpeech, textToSpeech };
+/**
+ * Streaming μ-law 8kHz para Twilio Media Streams.
+ * Devuelve el stream directamente sin conversión — ElevenLabs hace el encoding.
+ */
+async function streamTextToSpeechUlaw(text) {
+  const voiceId = process.env.ELEVENLABS_VOICE_ID;
+  const apiKey  = process.env.ELEVENLABS_API_KEY;
+
+  const response = await axios({
+    method: 'post',
+    url: `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
+    params: {
+      output_format: 'ulaw_8000',          // μ-law 8kHz — listo para Twilio
+      optimize_streaming_latency: 4,
+    },
+    headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
+    data: { text, model_id: 'eleven_turbo_v2_5', voice_settings: VOICE_SETTINGS },
+    responseType: 'stream',
+    timeout: 10000,
+  });
+
+  return response.data;
+}
+
+module.exports = { streamTextToSpeech, streamTextToSpeechUlaw, textToSpeech };

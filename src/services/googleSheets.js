@@ -27,14 +27,24 @@ function buildRow(reportData) {
 
 async function appendCallReport(reportData) {
   const { spreadsheetId, range } = getSheetsConfig();
-  let credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!credentialsJson) {
+  // Supports three credential formats:
+  // 1. GOOGLE_SERVICE_ACCOUNT_B64: base64-encoded JSON (no escaping issues)
+  // 2. GOOGLE_SERVICE_ACCOUNT_JSON: raw JSON string
+  // 3. File fallback: ./google-credentials.json
+  let credentialsJson;
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_B64) {
+    credentialsJson = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+    console.log('[Sheets] Loaded credentials from GOOGLE_SERVICE_ACCOUNT_B64');
+  } else if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    console.log('[Sheets] Loaded credentials from GOOGLE_SERVICE_ACCOUNT_JSON');
+  } else {
     try {
       credentialsJson = fs.readFileSync('./google-credentials.json', 'utf8');
       console.log('[Sheets] Loaded credentials from file');
     } catch (e) {
       console.error('[Sheets] Could not read google-credentials.json:', e.message);
-      throw new Error('No GOOGLE_SERVICE_ACCOUNT_JSON env var or google-credentials.json file');
+      throw new Error('No credentials found: set GOOGLE_SERVICE_ACCOUNT_B64, GOOGLE_SERVICE_ACCOUNT_JSON, or provide google-credentials.json');
     }
   }
 

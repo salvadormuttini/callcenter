@@ -3,6 +3,8 @@
 const { DeepgramClient } = require('@deepgram/sdk');
 
 function createSTTStream({ onTranscript, onSpeechStart, onError }) {
+  console.log('[Deepgram] createSTTStream called');
+  console.log('[Deepgram] DEEPGRAM_API_KEY exists:', !!process.env.DEEPGRAM_API_KEY);
   const client = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY });
   const pendingAudio = [];
   let connRef = null;

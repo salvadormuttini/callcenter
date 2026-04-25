@@ -2,12 +2,27 @@
 
 const { DeepgramClient } = require('@deepgram/sdk');
 
-/**
- * Crea una conexión de STT en tiempo real con Deepgram.
- * Acepta audio μ-law 8kHz directamente (mismo formato que Twilio Media Streams).
- */
 function createSTTStream({ onTranscript, onSpeechStart, onError }) {
   const client = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY });
+  const pendingAudio = [];
+  let connRef = null;
+  let isOpen = false;
+  let isClosed = false;
+  let warnedDroppedAfterClose = false;
+
+  function flushPendingAudio() {
+    if (!connRef || !isOpen || isClosed) return;
+    while (pendingAudio.length) {
+      const chunk = pendingAudio.shift();
+      try {
+        connRef.sendMedia(chunk);
+      } catch (err) {
+        console.error('[Deepgram] Error enviando audio:', err?.message || err);
+        if (onError) onError(err);
+        break;
+      }
+    }
+  }
 
   const connPromise = client.listen.v1.connect({
     model: 'nova-2',
@@ -22,8 +37,12 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
   });
 
   connPromise.then((conn) => {
+    connRef = conn;
+
     conn.on('open', () => {
+      isOpen = true;
       console.log('[Deepgram] STT conectado');
+      flushPendingAudio();
     });
 
     conn.on('message', (data) => {
@@ -41,25 +60,47 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
     });
 
     conn.on('close', () => {
+      isOpen = false;
+      isClosed = true;
       console.log('[Deepgram] STT desconectado');
     });
 
     conn.connect();
   }).catch((err) => {
+    isClosed = true;
+    pendingAudio.length = 0;
     console.error('[Deepgram] Error inicializando STT:', err?.message || err);
     if (onError) onError(err);
   });
 
   return {
     send(audioChunk) {
-      connPromise.then((conn) => conn.sendMedia(audioChunk)).catch((err) => {
-        console.error('[Deepgram] Error enviando audio:', err?.message || err);
-        if (onError) onError(err);
-      });
+      if (isClosed) {
+        if (!warnedDroppedAfterClose) {
+          console.warn('[Deepgram] Audio descartado: STT ya cerrado');
+          warnedDroppedAfterClose = true;
+        }
+        return;
+      }
+
+      if (isOpen && connRef) {
+        try {
+          connRef.sendMedia(audioChunk);
+        } catch (err) {
+          console.error('[Deepgram] Error enviando audio:', err?.message || err);
+          if (onError) onError(err);
+        }
+        return;
+      }
+
+      pendingAudio.push(audioChunk);
     },
 
     finish() {
+      isClosed = true;
+      pendingAudio.length = 0;
       connPromise.then((conn) => {
+        isOpen = false;
         try { conn.sendCloseStream({ type: 'CloseStream' }); } catch (_) {}
         conn.close();
       }).catch(() => {});

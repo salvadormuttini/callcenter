@@ -20,7 +20,7 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
     while (pendingAudio.length) {
       const chunk = pendingAudio.shift();
       try {
-        connRef.sendMedia(chunk);
+        connRef.socket.send(chunk);
         sentChunks += 1;
         flushedChunks += 1;
         console.log(`[Deepgram] chunk enviada (flush) #${sentChunks} | flushed=${flushedChunks} | bytes=${chunk?.length || 0}`);
@@ -109,7 +109,7 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
 
       if (isOpen && connRef) {
         try {
-          connRef.sendMedia(audioChunk);
+          connRef.socket.send(audioChunk);
           sentChunks += 1;
           console.log(`[Deepgram] chunk enviada #${sentChunks} | bytes=${audioChunk?.length || 0}`);
         } catch (err) {

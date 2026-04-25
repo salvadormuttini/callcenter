@@ -55,6 +55,8 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
 
     conn.on('message', (data) => {
       deepgramMessages += 1;
+      if (typeof data === 'string') data = JSON.parse(data);
+      if (Buffer.isBuffer(data)) data = JSON.parse(data.toString());
       if (!loggedRawMessage) {
         console.log('[Deepgram raw]', data);
         loggedRawMessage = true;
@@ -72,7 +74,7 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
         ).trim();
 
         const isFinal = data?.is_final === true || data?.speech_final === true || data?.from_finalize === true;
-        if (text && isFinal) onTranscript(text);
+        if (text) onTranscript(text);
       } else if (messageType === 'speechstarted') {
         if (onSpeechStart) onSpeechStart();
       }

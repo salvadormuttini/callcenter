@@ -11,6 +11,32 @@ function getSheetsConfig() {
   };
 }
 
+function buildSheetsClient() {
+  let credentialsJson;
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_B64) {
+    credentialsJson = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+  } else if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  } else {
+    try {
+      credentialsJson = fs.readFileSync('./google-credentials.json', 'utf8');
+    } catch (e) {
+      throw new Error('No Google credentials: set GOOGLE_SERVICE_ACCOUNT_B64 or GOOGLE_SERVICE_ACCOUNT_JSON');
+    }
+  }
+
+  const credentials = JSON.parse(credentialsJson);
+  if (credentials.private_key) {
+    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n').replace(/\\r/g, '\r').trim();
+  }
+
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+  return google.sheets({ version: 'v4', auth });
+}
+
 function buildRow(reportData) {
   return [
     reportData.debtorName    || '',
@@ -104,4 +130,10 @@ async function appendCallReport(reportData) {
   }
 }
 
-module.exports = { appendCallReport };
+async function getSheetRows(spreadsheetId, range) {
+  const sheets = await buildSheetsClient();
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  return response.data.values || [];
+}
+
+module.exports = { appendCallReport, getSheetRows };

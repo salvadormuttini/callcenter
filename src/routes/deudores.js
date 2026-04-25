@@ -3,35 +3,11 @@
 const express  = require('express');
 const router   = express.Router();
 const twilio   = require('twilio');
-const { google } = require('googleapis');
+const { getSheetRows } = require('../services/googleSheets');
 const conversation = require('../services/conversation');
 
 const SHEET_ID = '15kL4w4-Qj2j0ZeApuoroe_aHk9NsBrQIL1JYYLIiRTc';
 const BASE_URL = () => process.env.BASE_URL;
-
-// ─── Google Sheets auth (same pattern as googleSheets.js) ────────────────────
-
-function getSheetsClient() {
-  let credentialsJson;
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_B64) {
-    credentialsJson = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
-  } else if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  } else {
-    throw new Error('No Google credentials found');
-  }
-
-  const credentials = JSON.parse(credentialsJson);
-  if (credentials.private_key) {
-    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n').replace(/\\r/g, '\r').trim();
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-  return google.sheets({ version: 'v4', auth });
-}
 
 // ─── GET /api/calls/deudores/:debtorName ─────────────────────────────────────
 
@@ -39,14 +15,8 @@ router.get('/:debtorName', async (req, res) => {
   const { debtorName } = req.params;
 
   try {
-    // 1. Read sheet
-    const sheets = getSheetsClient();
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: 'A:G',
-    });
-
-    const rows = response.data.values || [];
+    // 1. Read sheet via shared service (inherits fixed auth + NODE_OPTIONS)
+    const rows = await getSheetRows(SHEET_ID, 'A:G');
 
     // 2. Find header row and locate debtor
     const headerIdx = rows.findIndex(r => (r[0] || '').toUpperCase() === 'NOMBRE');

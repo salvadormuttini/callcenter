@@ -3,6 +3,38 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { SYSTEM_PROMPT } = require('../config/valentina');
 
+function amountToWords(n) {
+  n = Math.round(n);
+  if (n === 0) return 'cero';
+  const ones = ['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve',
+    'diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve'];
+  const tens = ['','','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+  const huns = ['','ciento','doscientos','trescientos','cuatrocientos','quinientos',
+    'seiscientos','setecientos','ochocientos','novecientos'];
+
+  function below1000(x) {
+    let s = '';
+    if (x >= 100) { s += x === 100 ? 'cien' : huns[Math.floor(x / 100)]; x %= 100; if (x) s += ' '; }
+    if (x >= 20)  { s += tens[Math.floor(x / 10)]; if (x % 10) s += ' y ' + ones[x % 10]; }
+    else if (x)   { s += ones[x]; }
+    return s;
+  }
+
+  let result = '';
+  if (n >= 1000000) {
+    const m = Math.floor(n / 1000000);
+    result += (m === 1 ? 'un millón' : below1000(m) + ' millones') + ' ';
+    n %= 1000000;
+  }
+  if (n >= 1000) {
+    const k = Math.floor(n / 1000);
+    result += (k === 1 ? 'mil' : below1000(k) + ' mil') + ' ';
+    n %= 1000;
+  }
+  if (n > 0) result += below1000(n);
+  return result.trim();
+}
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Detecta fin de oración: . ! ? seguido de espacio (o fin de string)
@@ -19,7 +51,7 @@ function buildSystem(debtorInfo, customSystemPrompt = null) {
         '=== INFORMACIÓN DEL DEUDOR ===',
         `Nombre: ${debtorInfo.name || 'Desconocido'}`,
         `Cuenta: ${debtorInfo.accountId || 'N/A'}`,
-        `Monto: $${(debtorInfo.amount || 0).toLocaleString('es-AR')}`,
+        `Monto: ${amountToWords(debtorInfo.amount || 0)} pesos argentinos`,
         `Mora: ${debtorInfo.daysOverdue || 0} días`,
       ].join('\n')
     : 'Sin datos del deudor.';

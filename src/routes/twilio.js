@@ -12,7 +12,7 @@ const { generateAndSendReport } = require('../services/callReport');
 const { GREETING_TEMPLATE, UNKNOWN_GREETING } = require('../config/valentina');
 
 const BASE_URL = process.env.BASE_URL;
-const GATHER_TIMEOUT = 7;
+const GATHER_TIMEOUT = 15;
 
 // Streams activos: token → PassThrough registrado antes de que lleguen datos.
 // Twilio empieza a descargar inmediatamente — no necesita polling.

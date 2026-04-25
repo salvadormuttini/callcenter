@@ -15,7 +15,16 @@
       "Bash(xargs basename *)",
       "Bash(curl -s http://localhost:4040/api/tunnels)",
       "Bash(python3 -c \" import json,sys data = json.load\\(sys.stdin\\) for t in data.get\\('tunnels', []\\): print\\('URL pública:', t['public_url']\\) print\\('Estado: ', t['status']\\) \")",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "mcp__claude_ai_Google_Drive__search_files",
+      "mcp__claude_ai_Google_Drive__get_file_metadata",
+      "mcp__claude_ai_Google_Drive__read_file_content",
+      "mcp__claude_ai_Google_Drive__download_file_content",
+      "mcp__claude_ai_Google_Drive__list_recent_files",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) content = data['content'][0]['text'] if data.get\\('content'\\) else str\\(data\\) print\\(content[:5000]\\) \")",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) files = data.get\\('files', []\\) for f in files: if 'bml' in f.get\\('owner',''\\).lower\\(\\) or 'cidesa' in f.get\\('title',''\\).lower\\(\\) or f.get\\('mimeType',''\\) in ['application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.google-apps.spreadsheet']: print\\(f['title'], '|', f['mimeType'], '|', f['id'], '|', f.get\\('parentId',''\\)\\) \")",
+      "Bash(python3 *)",
+      "Bash(pip3 install *)"
     ]
   }
 }

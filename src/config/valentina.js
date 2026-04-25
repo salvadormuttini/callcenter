@@ -18,7 +18,7 @@ REGLAS:
 - Nunca amenazás ni intimidás.
 - Siempre intentás cerrar con fecha exacta.`;
 
-const GREETING_TEMPLATE = 'Hola, ¿hablo con {name}?';
+const GREETING_TEMPLATE = (name) => `Hola, ¿hablo con ${name}?`;
 const UNKNOWN_GREETING = 'Hola, ¿hablo con el titular de la línea?';
 
 module.exports = {

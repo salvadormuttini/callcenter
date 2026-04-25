@@ -12,6 +12,7 @@ async function sendCallReport(report) {
     callSid,
     duration,
     semaphore,
+    categorizacion,
     result,
     summary,
     keyMoments,
@@ -23,6 +24,7 @@ async function sendCallReport(report) {
   const html = `
   <h2>📞 Reporte de Llamada — Cole</h2>
   <p><b>Deudor:</b> ${debtorName}</p>
+  <p><b>Categorización BML:</b> <code>${categorizacion || 'N/A'}</code></p>
   <p><b>Resultado:</b> ${result}</p>
   <p><b>Resumen:</b> ${summary}</p>
   <p><b>Próxima acción:</b> ${nextAction}</p>

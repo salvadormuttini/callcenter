@@ -18,6 +18,9 @@ const GATHER_TIMEOUT = 15;
 // Twilio empieza a descargar inmediatamente — no necesita polling.
 const pendingStreams = new Map();
 
+// Último token activo por callSid — para cancelar cuando el usuario interrumpe.
+const activeTokens = new Map();
+
 setInterval(() => {
   const cutoff = Date.now() - 3 * 60 * 1000;
   for (const [t, e] of pendingStreams) {
@@ -206,10 +209,20 @@ router.post('/respond', (req, res) => {
   }
 
   console.log(`[${callSid}] Deudor: "${speechResult}"`);
+
+  // Cancelar stream anterior si el usuario interrumpió a Cole
+  const prevToken = activeTokens.get(callSid);
+  if (prevToken) {
+    const prev = pendingStreams.get(prevToken);
+    if (prev) { prev.stream.destroy(); pendingStreams.delete(prevToken); }
+    activeTokens.delete(callSid);
+  }
+
   conversation.addTurn(callSid, 'user', speechResult);
 
   // 1. Registrar PassThrough ANTES de responder — Twilio puede conectar inmediatamente
   const token = createStreamingToken(callSid, session);
+  activeTokens.set(callSid, token);
   const audioUrl = `${BASE_URL}/voice/audio/live/${token}`;
 
   // 2. Devolver TwiML al instante
@@ -225,6 +238,7 @@ router.post('/status', (req, res) => {
   console.log(`[Twilio] ${CallSid}: ${CallStatus}`);
 
   if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(CallStatus)) {
+    activeTokens.delete(CallSid);
 console.log(`[${CallSid}] STATUS HOOK ENTRÓ`);
     const s = conversation.get(CallSid);
     if (s) {

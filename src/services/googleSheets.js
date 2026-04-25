@@ -8,7 +8,10 @@ function buildSheetsClient() {
   if (!credentialsJson) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not set');
 
   const credentials = JSON.parse(credentialsJson);
-  credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+  credentials.private_key = credentials.private_key
+    .replace(/\\n/g, '\n')
+    .replace(/\n/g, '\n');
+  console.log('[Sheets DEBUG] private_key starts with:', credentials.private_key.slice(0, 30));
 
   const auth = new google.auth.GoogleAuth({
     credentials,

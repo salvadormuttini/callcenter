@@ -13,15 +13,15 @@ function getSheetsConfig() {
 
 function buildRow(reportData) {
   return [
-    new Date().toISOString(),
-    reportData.debtorName || 'Desconocido',
-    reportData.callSid || '',
-    reportData.semaphore || '',
-    reportData.categorizacion || '',
-    reportData.result || '',
-    reportData.summary || '',
-    (reportData.keyMoments || []).join(' | '),
-    reportData.nextAction || '',
+    reportData.debtorName    || '',
+    reportData.phone         || '',
+    reportData.amountOwed    || '',
+    reportData.daysOverdue   || '',
+    reportData.callResult    || '',  // BML code: PROM, NOPA, NRED, etc.
+    reportData.amountAgreed  || '',
+    reportData.commitmentDate|| '',
+    reportData.email         || '',
+    reportData.notes         || '',
   ];
 }
 

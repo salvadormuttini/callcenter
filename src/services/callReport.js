@@ -26,6 +26,8 @@ async function generateAndSendReport(session, callSid, callStatus) {
 {
   "semaphore": "verde" | "amarillo" | "rojo",
   "categorizacion": "<código BML>",
+  "amountAgreed": "<monto acordado como string, ej: '50000', o vacío si no hubo acuerdo>",
+  "commitmentDate": "<fecha de pago acordada como string, ej: 'viernes 30/04', o vacío si no hubo>",
   "result": "Una oración concisa del resultado (ej: 'Acordó pago parcial de $30.000 para el viernes')",
   "summary": "2-3 oraciones resumiendo qué pasó en la llamada",
   "keyMoments": ["momento 1", "momento 2", "momento 3"],
@@ -78,14 +80,26 @@ console.log('[Report] Claude respondió');
 
 console.log('[Report] armando reportData');  
 const reportData = {
+    // identidad
     debtorName,
     callSid,
-    semaphore: analysis.semaphore,
-    categorizacion: analysis.categorizacion || 'VOLTA',
-    result: analysis.result,
-    summary: analysis.summary,
-    keyMoments: analysis.keyMoments || [],
-    nextAction: analysis.nextAction,
+    phone:          session.debtorInfo?.phone        || '',
+    email:          session.debtorInfo?.email        || '',
+    // deuda
+    amountOwed:     session.debtorInfo?.amount       || '',
+    daysOverdue:    session.debtorInfo?.daysOverdue  || '',
+    // resultado
+    semaphore:      analysis.semaphore,
+    callResult:     analysis.categorizacion          || 'VOLTA',  // BML code
+    amountAgreed:   analysis.amountAgreed            || '',
+    commitmentDate: analysis.commitmentDate          || '',
+    notes:          analysis.nextAction              || '',
+    // para email/WhatsApp (sin cambios)
+    categorizacion: analysis.categorizacion          || 'VOLTA',
+    result:         analysis.result,
+    summary:        analysis.summary,
+    keyMoments:     analysis.keyMoments              || [],
+    nextAction:     analysis.nextAction,
   };
 
   // Email y WhatsApp en paralelo

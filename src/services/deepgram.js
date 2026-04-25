@@ -9,6 +9,11 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
   let isOpen = false;
   let isClosed = false;
   let warnedDroppedAfterClose = false;
+  let sentChunks = 0;
+  let queuedChunks = 0;
+  let flushedChunks = 0;
+  let deepgramMessages = 0;
+  let loggedRawMessage = false;
 
   function flushPendingAudio() {
     if (!connRef || !isOpen || isClosed) return;
@@ -16,6 +21,9 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
       const chunk = pendingAudio.shift();
       try {
         connRef.sendMedia(chunk);
+        sentChunks += 1;
+        flushedChunks += 1;
+        console.log(`[Deepgram] chunk enviada (flush) #${sentChunks} | flushed=${flushedChunks} | bytes=${chunk?.length || 0}`);
       } catch (err) {
         console.error('[Deepgram] Error enviando audio:', err?.message || err);
         if (onError) onError(err);
@@ -46,10 +54,26 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
     });
 
     conn.on('message', (data) => {
-      if (data?.type === 'Results') {
-        const text = data.channel?.alternatives?.[0]?.transcript?.trim();
-        if (data.is_final && text) onTranscript(text);
-      } else if (data?.type === 'SpeechStarted') {
+      deepgramMessages += 1;
+      if (!loggedRawMessage) {
+        console.log('[Deepgram raw]', data);
+        loggedRawMessage = true;
+      }
+      console.log(`[Deepgram] mensaje #${deepgramMessages} | type=${data?.type || 'unknown'}`);
+
+      const messageType = String(data?.type || '').toLowerCase();
+      if (messageType === 'results') {
+        const text = (
+          data?.channel?.alternatives?.[0]?.transcript ||
+          data?.result?.channel?.alternatives?.[0]?.transcript ||
+          data?.results?.channels?.[0]?.alternatives?.[0]?.transcript ||
+          data?.results?.channels?.[0]?.alternatives?.[0]?.paragraphs?.transcript ||
+          ''
+        ).trim();
+
+        const isFinal = data?.is_final === true || data?.speech_final === true || data?.from_finalize === true;
+        if (text && isFinal) onTranscript(text);
+      } else if (messageType === 'speechstarted') {
         if (onSpeechStart) onSpeechStart();
       }
     });
@@ -86,6 +110,8 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
       if (isOpen && connRef) {
         try {
           connRef.sendMedia(audioChunk);
+          sentChunks += 1;
+          console.log(`[Deepgram] chunk enviada #${sentChunks} | bytes=${audioChunk?.length || 0}`);
         } catch (err) {
           console.error('[Deepgram] Error enviando audio:', err?.message || err);
           if (onError) onError(err);
@@ -94,6 +120,8 @@ function createSTTStream({ onTranscript, onSpeechStart, onError }) {
       }
 
       pendingAudio.push(audioChunk);
+      queuedChunks += 1;
+      console.log(`[Deepgram] chunk en cola #${queuedChunks} | queue_size=${pendingAudio.length} | bytes=${audioChunk?.length || 0}`);
     },
 
     finish() {

@@ -38,6 +38,11 @@ async function appendCallReport(reportData) {
   console.log('[Sheets] GOOGLE_SHEETS_SPREADSHEET_ID:', spreadsheetId);
 
   try {
+    console.log('[Sheets] credentialsJson type:', typeof credentialsJson);
+    console.log('[Sheets] credentialsJson length:', credentialsJson?.length);
+    console.log('[Sheets] credentialsJson first 100 chars:', credentialsJson?.substring(0, 100));
+    console.log('[Sheets] credentialsJson last 100 chars:', credentialsJson?.substring(credentialsJson.length - 100));
+
     const credentials = JSON.parse(credentialsJson);
     console.log('[Sheets] Credentials parsed OK');
     console.log('[Sheets] private_key starts with:', credentials.private_key?.substring(0, 50));

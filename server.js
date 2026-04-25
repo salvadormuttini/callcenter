@@ -40,10 +40,12 @@ if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 app.use('/audio', express.static(TEMP_DIR));
 
 // ─── Rutas HTTP ───────────────────────────────────────────────────────────────
-const twilioRoutes = require('./src/routes/twilio');
-const callsRoutes  = require('./src/routes/calls');
+const twilioRoutes  = require('./src/routes/twilio');
+const callsRoutes   = require('./src/routes/calls');
+const deudoresRoutes = require('./src/routes/deudores');
 
 app.use('/voice', twilioRoutes);
+app.use('/api/deudores', deudoresRoutes);
 app.get('/debug/routes-version', (req, res) => {
   res.json({ ok: true, version: 'v1', time: new Date().toISOString() });
 });

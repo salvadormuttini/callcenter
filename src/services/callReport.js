@@ -3,6 +3,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { sendCallReport } = require('./email');
 const { sendWhatsAppReport } = require('./whatsapp');
+const { appendCallReport } = require('./googleSheets');
 const { BML_CODES } = require('../config/bml-codes');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -89,9 +90,10 @@ const reportData = {
 
   // Email y WhatsApp en paralelo
 console.log('[Report] entrando a envío');  
-const [emailResult, whatsappResult] = await Promise.allSettled([sendCallReport(reportData), sendWhatsAppReport(reportData)]);
+const [emailResult, whatsappResult, sheetsResult] = await Promise.allSettled([sendCallReport(reportData), sendWhatsAppReport(reportData), appendCallReport(reportData)]);
 console.log('[Report] EMAIL:', emailResult.status, emailResult.reason?.message || 'OK');
 console.log('[Report] WHATSAPP:', whatsappResult.status, whatsappResult.reason?.message || 'OK');
+console.log('[Report] SHEETS:', sheetsResult.status, sheetsResult.reason?.message || 'OK');
 }
 
 module.exports = { generateAndSendReport };

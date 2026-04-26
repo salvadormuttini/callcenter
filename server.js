@@ -46,6 +46,14 @@ const deudoresRoutes = require('./src/routes/deudores');
 
 app.use('/voice', twilioRoutes);
 app.use('/api/deudores', deudoresRoutes);
+app.get('/api/test/runtime', (req, res) => {
+  res.json({
+    node: process.version,
+    openssl: process.versions.openssl,
+    nodeOptions: process.env.NODE_OPTIONS || null,
+  });
+});
+
 app.get('/debug/routes-version', (req, res) => {
   res.json({ ok: true, version: 'v1', time: new Date().toISOString() });
 });

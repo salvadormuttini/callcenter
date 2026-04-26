@@ -46,6 +46,8 @@ const deudoresRoutes = require('./src/routes/deudores');
 
 app.use('/voice', twilioRoutes);
 app.use('/api/deudores', deudoresRoutes);
+// ─── Test endpoints ───────────────────────────────────────────────────────────
+
 app.get('/api/test/runtime', (req, res) => {
   res.json({
     node: process.version,
@@ -58,33 +60,83 @@ app.get('/debug/routes-version', (req, res) => {
   res.json({ ok: true, version: 'v1', time: new Date().toISOString() });
 });
 
+app.post('/api/test/twilio', async (req, res) => {
+  try {
+    const twilio = require('twilio');
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const account = await client.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
+    res.json({ ok: true, account: account.sid, status: account.status });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 app.get('/api/test/sheets', async (req, res) => {
   try {
     const { appendCallReport } = require('./src/services/googleSheets');
-
-    await appendCallReport({
-      nombre: 'TEST',
-      telefono: '000',
-      monto: 100,
-      resultado: 'TEST',
-      montoAcordado: 0,
-      fechaCompromiso: '',
-      email: '',
-      notas: 'test desde endpoint'
-    });
-
-    console.log('[Sheets TEST] OK');
+    await appendCallReport({ debtorName: 'TEST', callResult: 'TEST', notes: 'test desde endpoint' });
     res.json({ ok: true });
   } catch (e) {
-    console.error('[Sheets TEST ERROR]', e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/api/test/claude', async (req, res) => {
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'Di "ok"' }],
+    });
+    res.json({ ok: true, response: msg.content[0]?.text });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/api/test/elevenlabs', async (req, res) => {
+  try {
+    const axios = require('axios');
+    const r = await axios.get('https://api.elevenlabs.io/v1/user', {
+      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY },
+      timeout: 5000,
+    });
+    res.json({ ok: true, tier: r.data?.subscription?.tier });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/api/test/deepgram', async (req, res) => {
+  try {
+    const axios = require('axios');
+    const r = await axios.get('https://api.deepgram.com/v1/projects', {
+      headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}` },
+      timeout: 5000,
+    });
+    res.json({ ok: true, projects: r.data?.projects?.length ?? 0 });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 
 app.use('/api/calls', callsRoutes);
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Cole Call Center — Media Streams', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'Cole Call Center — Media Streams',
+    timestamp: new Date().toISOString(),
+    services: {
+      twilio:     !!process.env.TWILIO_ACCOUNT_SID,
+      sheets:     !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      claude:     !!process.env.ANTHROPIC_API_KEY,
+      elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+      deepgram:   !!process.env.DEEPGRAM_API_KEY,
+    },
+  });
 });
 
 // ─── HTTP + WebSocket en el mismo puerto ──────────────────────────────────────

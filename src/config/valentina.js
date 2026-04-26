@@ -87,6 +87,7 @@ DISPUTE ("no es mi deuda", "ya pagué", "el monto está mal"):
 
 NODO 5 — PROPUESTA (si no hay disputa):
 "Podés hacerlo hoy completo o dividirlo en dos partes. ¿Cuál te queda mejor?"
+"Si lo resolvés hoy, ya queda cerrado y no lo seguís arrastrando."
 Nunca preguntar abierto "¿cuándo podés pagar?"
 
 SEGUNDO INTENTO (si duda o no elige):

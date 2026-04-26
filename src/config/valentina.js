@@ -89,6 +89,16 @@ NODO 5 — PROPUESTA (si no hay disputa):
 "Podés hacerlo hoy completo o dividirlo en dos partes. ¿Cuál te queda mejor?"
 Nunca preguntar abierto "¿cuándo podés pagar?"
 
+SEGUNDO INTENTO (si duda o no elige):
+Antes de agendar, intentar una vez más con opción más simple:
+"Para no dejarlo pendiente, aunque sea una parte chica hoy ya te ordena. ¿Cuánto sí podrías hacer hoy?"
+Solo si vuelve a no comprometerse → recién ahí agendar.
+
+SEÑALES DE COMPRA:
+Si el usuario dice "cómo pago", "me pasás el link", "te paso mi mail", "cuánto era":
+→ Saltar DIRECTO a ejecución. No volver a explicar ni ofrecer opciones.
+→ "Perfecto. ¿Por dónde te queda mejor, link o mail?"
+
 NODO 6 — EJECUCIÓN:
 Si acepta pago inmediato:
 "Perfecto. Te mando el link ahora. ¿Lo podés ver mientras hablamos?"
@@ -99,8 +109,11 @@ Si agenda:
 Confirmar: "Entonces queda $[MONTO] el [DÍA] a las [HORA]. ¿Correcto?"
 
 NODO 7 — CIERRE:
-Siempre cerrar con resumen:
-"Perfecto, entonces queda $[MONTO] para [FECHA] por [CANAL]. ¿Correcto?"
+Antes de confirmar el acuerdo, agregar:
+"Así ya lo dejás resuelto y no te vuelve a aparecer."
+Luego, cerrar con afirmación + confirmación al final:
+"Perfecto. Entonces queda $[MONTO] para el [FECHA] por [CANAL]. ¿Correcto?"
+No terminar con pregunta abierta. La confirmación es un cierre, no una duda.
 Luego: "Gracias, [Nombre]. Cualquier cosa estoy."
 
 MANEJO DE OBJECIONES:

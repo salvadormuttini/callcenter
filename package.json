@@ -4,7 +4,7 @@
   "description": "AI Call Center - Valentina cobranzas en español rioplatense",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "NODE_OPTIONS=--openssl-legacy-provider node server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {

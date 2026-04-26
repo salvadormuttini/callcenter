@@ -12,6 +12,10 @@ function buildSheetsClient() {
     .replace(/\\n/g, '\n')
     .replace(/\n/g, '\n');
   console.log('[Sheets DEBUG] private_key starts with:', credentials.private_key.slice(0, 30));
+  console.log('[Sheets DEBUG] has END:', credentials.private_key.includes('-----END PRIVATE KEY-----'));
+  console.log('[Sheets DEBUG] key length:', credentials.private_key.length);
+  console.log('[Sheets DEBUG] newline count:', (credentials.private_key.match(/\n/g) || []).length);
+  console.log('[Sheets DEBUG] key ends with:', credentials.private_key.slice(-30));
 
   const auth = new google.auth.GoogleAuth({
     credentials,

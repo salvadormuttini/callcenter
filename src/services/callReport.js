@@ -4,6 +4,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { sendCallReport } = require('./email');
 const { sendWhatsAppReport } = require('./whatsapp');
 const { appendCallReport } = require('./googleSheets');
+const { appendAnalytics } = require('./analyticsSheet');
 const { BML_CODES } = require('../config/bml-codes');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -26,8 +27,13 @@ async function generateAndSendReport(session, callSid, callStatus) {
 {
   "semaphore": "verde" | "amarillo" | "rojo",
   "categorizacion": "<código BML>",
+  "ptp": "sí" | "no",
   "amountAgreed": "<monto acordado como string, ej: '50000', o vacío si no hubo acuerdo>",
   "commitmentDate": "<fecha de pago acordada como string, ej: 'viernes 30/04', o vacío si no hubo>",
+  "mainObjection": "<objeción principal del deudor, ej: 'no tiene dinero esta semana', o vacío>",
+  "whyNotPaid": "<razón de fondo por la que no pagó, ej: 'liquidez', 'evasión', 'disputa', 'desconocía', o vacío si pagó>",
+  "keyMoment": "<el momento más importante de la conversación en 1 oración>",
+  "recommendation": "<qué hacer distinto en la próxima llamada, 1 oración>",
   "result": "Una oración concisa del resultado (ej: 'Acordó pago parcial de $30.000 para el viernes')",
   "summary": "2-3 oraciones resumiendo qué pasó en la llamada",
   "keyMoments": ["momento 1", "momento 2", "momento 3"],
@@ -100,14 +106,26 @@ const reportData = {
     summary:        analysis.summary,
     keyMoments:     analysis.keyMoments              || [],
     nextAction:     analysis.nextAction,
+    // analytics
+    ptp:            analysis.ptp                    || 'no',
+    mainObjection:  analysis.mainObjection           || '',
+    whyNotPaid:     analysis.whyNotPaid              || '',
+    keyMoment:      analysis.keyMoment               || '',
+    recommendation: analysis.recommendation          || '',
   };
 
   // Email y WhatsApp en paralelo
 console.log('[Report] entrando a envío');  
-const [emailResult, whatsappResult, sheetsResult] = await Promise.allSettled([sendCallReport(reportData), sendWhatsAppReport(reportData), appendCallReport(reportData)]);
+const [emailResult, whatsappResult, sheetsResult, analyticsResult] = await Promise.allSettled([
+    sendCallReport(reportData),
+    sendWhatsAppReport(reportData),
+    appendCallReport(reportData),
+    appendAnalytics(reportData),
+  ]);
 console.log('[Report] EMAIL:', emailResult.status, emailResult.reason?.message || 'OK');
 console.log('[Report] WHATSAPP:', whatsappResult.status, whatsappResult.reason?.message || 'OK');
 console.log('[Report] SHEETS:', sheetsResult.status, sheetsResult.reason?.message || 'OK');
+console.log('[Report] ANALYTICS:', analyticsResult.status, analyticsResult.reason?.message || 'OK');
 }
 
 module.exports = { generateAndSendReport };

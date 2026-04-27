@@ -7,6 +7,7 @@ const { google } = require('googleapis');
 // F: Monto Acordado | G: Fecha Compromiso | H: Objeción Principal
 // I: Por Qué No Pagó | J: Momento Clave | K: Recomendación
 // L: Fecha Llamada | M: Duración (segundos)
+// N: Sentimiento | O: Calidad Llamada (1-10) | P: Score Recupero (1-10)
 
 function buildSheetsClient() {
   const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
@@ -39,12 +40,15 @@ function buildRow(data) {
     data.recommendation     || '',
     new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }),
     data.duration           || '',
+    data.sentiment          || '',
+    data.callQuality        ?? '',
+    data.recoveryScore      ?? '',
   ];
 }
 
 async function appendAnalytics(data) {
   const spreadsheetId = process.env.ANALYTICS_SPREADSHEET_ID;
-  const range          = process.env.ANALYTICS_RANGE || 'A:M';
+  const range          = process.env.ANALYTICS_RANGE || 'A:P';
 
   if (!spreadsheetId) {
     console.warn('[Analytics] Omitido: falta ANALYTICS_SPREADSHEET_ID');

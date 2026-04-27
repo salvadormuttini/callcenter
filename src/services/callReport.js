@@ -34,6 +34,9 @@ async function generateAndSendReport(session, callSid, callStatus) {
   "whyNotPaid": "<razón de fondo por la que no pagó, ej: 'liquidez', 'evasión', 'disputa', 'desconocía', o vacío si pagó>",
   "keyMoment": "<el momento más importante de la conversación en 1 oración>",
   "recommendation": "<qué hacer distinto en la próxima llamada, 1 oración>",
+  "sentiment": "positivo" | "neutral" | "negativo",
+  "callQuality": <número 1-10 basado en fluidez, claridad y persuasión de la llamada>,
+  "recoveryScore": <número 1-10 basado en probabilidad real de que el deudor pague>,
   "result": "Una oración concisa del resultado (ej: 'Acordó pago parcial de $30.000 para el viernes')",
   "summary": "2-3 oraciones resumiendo qué pasó en la llamada",
   "keyMoments": ["momento 1", "momento 2", "momento 3"],
@@ -112,6 +115,9 @@ const reportData = {
     whyNotPaid:     analysis.whyNotPaid              || '',
     keyMoment:      analysis.keyMoment               || '',
     recommendation: analysis.recommendation          || '',
+    sentiment:      analysis.sentiment               || 'neutral',
+    callQuality:    analysis.callQuality             ?? '',
+    recoveryScore:  analysis.recoveryScore           ?? '',
   };
 
   // Email y WhatsApp en paralelo

@@ -116,8 +116,8 @@ const reportData = {
     keyMoment:      analysis.keyMoment               || '',
     recommendation: analysis.recommendation          || '',
     sentiment:      analysis.sentiment               || 'neutral',
-    callQuality:    analysis.callQuality             ?? '',
-    recoveryScore:  analysis.recoveryScore           ?? '',
+    callQuality:    Number.isFinite(analysis.callQuality)    ? analysis.callQuality    : '',
+    recoveryScore:  Number.isFinite(analysis.recoveryScore)  ? analysis.recoveryScore  : '',
   };
 
   // Email y WhatsApp en paralelo

@@ -74,6 +74,14 @@ const TEMP_DIR = path.join(__dirname, 'temp');
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 app.use('/audio', express.static(TEMP_DIR));
 
+// ─── Force HTTPS in production ────────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
+    return res.redirect('https://' + req.host + req.url);
+  }
+  next();
+});
+
 // ─── Auth routes (public) ─────────────────────────────────────────────────────
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'src/public/login.html'));

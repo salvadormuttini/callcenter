@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cole — Ingresar</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f5f5f7;
+      --card:      #ffffff;
+      --blue:      #0071e3;
+      --blue-hover:#0077ed;
+      --text:      #1d1d1f;
+      --sub:       #6e6e73;
+      --muted:     #a1a1a6;
+      --red:       #ff3b30;
+      --shadow:    0 2px 20px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+      --radius:    18px;
+      --radius-pill: 980px;
+    }
+
+    body {
+      font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .box {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 48px 40px 40px;
+      width: 100%;
+      max-width: 380px;
+      animation: fadeUp 0.4s ease both;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 44px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--sub);
+      margin-bottom: 36px;
+    }
+
+    .field {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 7px;
+    }
+
+    input[type="password"] {
+      width: 100%;
+      padding: 13px 16px;
+      background: #f5f5f7;
+      border: none;
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: box-shadow 150ms ease;
+    }
+
+    input[type="password"]:focus {
+      box-shadow: 0 0 0 3px rgba(0,113,227,0.25);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-pill);
+      font-size: 16px;
+      font-weight: 590;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 200ms ease;
+    }
+
+    .btn:hover { background: var(--blue-hover); transform: scale(1.01); }
+    .btn:active { transform: scale(0.99); }
+
+    .error {
+      display: none;
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--red);
+    }
+
+    .error.visible { display: block; }
+
+    @media (max-width: 420px) {
+      .box { padding: 36px 24px 32px; }
+      .logo { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">Cole</div>
+    <div class="subtitle">Panel de cobranzas</div>
+
+    <form method="POST" action="/auth/login" id="loginForm">
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" name="password" id="password" autofocus autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn">Ingresar</button>
+    </form>
+
+    <div class="error" id="errorMsg">Contraseña incorrecta</div>
+  </div>
+
+  <script>
+    // Show error if redirected back with ?error=1
+    if (new URLSearchParams(location.search).get('error') === '1') {
+      document.getElementById('errorMsg').classList.add('visible');
+    }
+  </script>
+</body>
+</html>

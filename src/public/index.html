@@ -54,6 +54,23 @@
       animation: fadeUp 0.45s ease both;
     }
 
+    /* ── LOGOUT ── */
+    .logout-bar {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      z-index: 50;
+    }
+
+    .logout-link {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+
+    .logout-link:hover { color: var(--sub); }
+
     /* ── HEADER ── */
     header {
       text-align: center;
@@ -587,6 +604,10 @@
   </style>
 </head>
 <body>
+
+  <div class="logout-bar">
+    <a class="logout-link" href="/auth/logout">Cerrar sesión</a>
+  </div>
 
   <div class="main">
 

@@ -8,11 +8,14 @@ const { WebSocketServer } = require('ws');
 const path    = require('path');
 const fs      = require('fs');
 
+const cookieParser = require('cookie-parser');
+
 const { handleMediaStream } = require('./src/routes/media-stream');
 const { startProcessor }   = require('./src/services/retryQueue');
 const { log, readLastLines } = require('./src/services/logger');
 const { Resend }             = require('resend');
 const callQueue              = require('./src/services/callQueue');
+const { requireAuth, createSession, destroySession, SESSION_COOKIE, SESSION_TTL_MS } = require('./src/middleware/auth');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -38,11 +41,55 @@ if (missing.length) {
 // ─── Middlewares ──────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'src/public')));
+app.use(cookieParser());
 
 const TEMP_DIR = path.join(__dirname, 'temp');
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 app.use('/audio', express.static(TEMP_DIR));
+
+// ─── Auth routes (public) ─────────────────────────────────────────────────────
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'src/public/login.html'));
+});
+
+app.post('/auth/login', (req, res) => {
+  const { password } = req.body;
+  const expected = process.env.PANEL_PASSWORD;
+
+  if (!expected) {
+    // No password configured → allow access (dev mode)
+    log.warn('Auth', 'PANEL_PASSWORD no configurada — acceso sin contraseña');
+    const token = createSession();
+    res.cookie(SESSION_COOKIE, token, { httpOnly: true, maxAge: SESSION_TTL_MS, sameSite: 'lax' });
+    return res.redirect('/');
+  }
+
+  if (password === expected) {
+    const token = createSession();
+    res.cookie(SESSION_COOKIE, token, { httpOnly: true, maxAge: SESSION_TTL_MS, sameSite: 'lax' });
+    log.info('Auth', 'Login exitoso');
+    return res.redirect('/');
+  }
+
+  log.warn('Auth', 'Contraseña incorrecta');
+  res.redirect('/login?error=1');
+});
+
+app.get('/auth/logout', (req, res) => {
+  const token = req.cookies?.[SESSION_COOKIE];
+  if (token) destroySession(token);
+  res.clearCookie(SESSION_COOKIE);
+  log.info('Auth', 'Logout');
+  res.redirect('/login');
+});
+
+// ─── Protected static panel (index.html) ─────────────────────────────────────
+app.get('/', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'src/public/index.html'));
+});
+
+// All other static assets (CSS, JS bundles, etc.) — unprotected so login page loads correctly
+app.use(express.static(path.join(__dirname, 'src/public')));
 
 // ─── Rutas HTTP ───────────────────────────────────────────────────────────────
 const twilioRoutes  = require('./src/routes/twilio');
@@ -129,8 +176,8 @@ app.get('/api/test/deepgram', async (req, res) => {
 
 app.use('/api/calls', callsRoutes);
 
-// ─── Call queue endpoints ─────────────────────────────────────────────────────
-app.post('/api/queue/batch', (req, res) => {
+// ─── Call queue endpoints (protected) ────────────────────────────────────────
+app.post('/api/queue/batch', requireAuth, (req, res) => {
   const { debtors } = req.body;
   if (!Array.isArray(debtors) || debtors.length === 0)
     return res.status(400).json({ error: 'Se requiere un array "debtors" no vacío' });
@@ -142,23 +189,23 @@ app.post('/api/queue/batch', (req, res) => {
   res.json({ ok: true, queued: ids.length, ids });
 });
 
-app.get('/api/queue/status', (req, res) => {
+app.get('/api/queue/status', requireAuth, (req, res) => {
   res.json(callQueue.getQueueStatus());
 });
 
-app.post('/api/queue/clear', (req, res) => {
+app.post('/api/queue/clear', requireAuth, (req, res) => {
   const removed = callQueue.clearPending();
   log.info('Queue', `Cola limpiada por usuario — ${removed} cancelados`);
   res.json({ ok: true, cancelled: removed });
 });
 
-app.get('/api/logs', (req, res) => {
+app.get('/api/logs', requireAuth, (req, res) => {
   const lines = readLastLines(50);
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.send(lines.join('\n') || '(sin logs)');
 });
 
-app.get('/api/retries', (req, res) => {
+app.get('/api/retries', requireAuth, (req, res) => {
   const { queue } = require('./src/services/retryQueue');
   res.json({ pending: queue.length, entries: queue.map(e => ({ phone: e.phone, retryAt: new Date(e.retryAt).toISOString(), attempts: e.attempts })) });
 });

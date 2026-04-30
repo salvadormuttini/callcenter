@@ -12,6 +12,7 @@ const { handleMediaStream } = require('./src/routes/media-stream');
 const { startProcessor }   = require('./src/services/retryQueue');
 const { log, readLastLines } = require('./src/services/logger');
 const { Resend }             = require('resend');
+const callQueue              = require('./src/services/callQueue');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -127,6 +128,29 @@ app.get('/api/test/deepgram', async (req, res) => {
 });
 
 app.use('/api/calls', callsRoutes);
+
+// ─── Call queue endpoints ─────────────────────────────────────────────────────
+app.post('/api/queue/batch', (req, res) => {
+  const { debtors } = req.body;
+  if (!Array.isArray(debtors) || debtors.length === 0)
+    return res.status(400).json({ error: 'Se requiere un array "debtors" no vacío' });
+
+  callQueue.resetQueue();
+  const ids = callQueue.addBatch(debtors);
+  callQueue.startProcessing();
+  log.info('Queue', `Campaña iniciada — ${debtors.length} deudores encolados`);
+  res.json({ ok: true, queued: ids.length, ids });
+});
+
+app.get('/api/queue/status', (req, res) => {
+  res.json(callQueue.getQueueStatus());
+});
+
+app.post('/api/queue/clear', (req, res) => {
+  const removed = callQueue.clearPending();
+  log.info('Queue', `Cola limpiada por usuario — ${removed} cancelados`);
+  res.json({ ok: true, cancelled: removed });
+});
 
 app.get('/api/logs', (req, res) => {
   const lines = readLastLines(50);

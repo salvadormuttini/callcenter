@@ -286,6 +286,26 @@
       margin-right: 8px;
     }
 
+    /* ── STOP BUTTON ── */
+    .btn-stop {
+      display: none;
+      width: 100%;
+      max-width: 400px;
+      padding: 14px 32px;
+      background: none;
+      color: #c0392b;
+      border: 1.5px solid #c0392b;
+      border-radius: var(--radius-pill);
+      font-size: 15px;
+      font-weight: 590;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .btn-stop.visible { display: block; }
+    .btn-stop:hover { background: #fff0f0; }
+
     /* ── CTA ── */
     .cta-wrap {
       display: flex;
@@ -613,6 +633,7 @@
     <!-- CTA -->
     <div class="cta-wrap">
       <button class="btn-main" id="btnCampaign" disabled>Iniciar campaña</button>
+      <button class="btn-stop" id="btnStop">⏹ Detener campaña</button>
       <div class="progress-bar-wrap" id="progressWrap">
         <div class="progress-bar" id="progressBar"></div>
       </div>
@@ -663,6 +684,7 @@
     const tableWrap      = document.getElementById('tableWrap');
     const tableBody      = document.getElementById('tableBody');
     const btnCampaign    = document.getElementById('btnCampaign');
+    const btnStop        = document.getElementById('btnStop');
     const progressWrap   = document.getElementById('progressWrap');
     const progressBar    = document.getElementById('progressBar');
     const progressText   = document.getElementById('progressText');
@@ -673,8 +695,10 @@
     const btnModalCall   = document.getElementById('btnModalCall');
     const modalStatus    = document.getElementById('modalStatus');
 
-    let debtors = [];
-    let running = false;
+    let debtors    = [];
+    let running    = false;
+    let pollTimer  = null;
+    let idToDebtor = {}; // queue id → debtor object
 
     // ── Drag & drop ──
     dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
@@ -813,62 +837,110 @@
       progressText.textContent = '';
     }
 
-    // ── Campaign ──
+    // ── Campaign — queue-based ──
     btnCampaign.addEventListener('click', async () => {
       if (running || debtors.length === 0) return;
+
       running = true;
       summaryEl.classList.remove('visible');
       btnCampaign.disabled = true;
+      btnCampaign.innerHTML = `<span class="spinner"></span>Encolando llamadas…`;
+      btnStop.classList.add('visible');
       progressWrap.classList.add('visible');
       expandTable();
 
-      let done = 0, ptpCount = 0, errors = 0;
-      const total = debtors.length;
+      // Assign stable IDs and map them
+      idToDebtor = {};
+      const payload = debtors.map(d => {
+        const id = crypto.randomUUID();
+        d._queueId = id;
+        idToDebtor[id] = d;
+        return { id, name: d.name, phone: d.phone, amount: d.amount, daysOverdue: d.daysOverdue };
+      });
 
-      const setBtn = n => {
-        btnCampaign.innerHTML = `<span class="spinner"></span>Llamando ${n} de ${total}`;
-      };
-
-      setBtn(0);
-
-      for (const debtor of debtors) {
-        setStatus(debtor, 'calling');
-        setBtn(done + 1);
-        progressBar.style.width = `${(done / total) * 100}%`;
-        debtor.rowEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-        try {
-          const res = await fetch('/api/calls/outbound', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: debtor.phone,
-              debtor: { name: debtor.name, amount: debtor.amount, daysOverdue: debtor.daysOverdue },
-            }),
-          });
-          const data = await res.json();
-          if (res.ok) {
-            setStatus(debtor, 'calling');
-          } else {
-            const msg  = data.error || `HTTP ${res.status}`;
-            // 502 = Twilio infra error → transient, will retry server-side
-            const kind = res.status === 502 ? 'error-retry' : 'error';
-            setStatus(debtor, kind, msg);
-            errors++;
-          }
-        } catch (err) {
-          // Network-level failure → transient
-          setStatus(debtor, 'error-retry', err.message);
-          errors++;
-        }
-
-        done++;
-        if (done < total) await delay(5000);
+      try {
+        const res  = await fetch('/api/queue/batch', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ debtors: payload }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch (err) {
+        btnCampaign.textContent = 'Error al iniciar campaña';
+        progressText.textContent = err.message;
+        running = false;
+        btnStop.classList.remove('visible');
+        return;
       }
 
-      progressBar.style.width = '100%';
-      btnCampaign.textContent = '✅ Campaña completada';
+      btnCampaign.innerHTML = `<span class="spinner"></span>Llamando…`;
+      startPolling();
+    });
 
+    // ── Stop button ──
+    btnStop.addEventListener('click', async () => {
+      await fetch('/api/queue/clear', { method: 'POST' });
+      stopPolling();
+      btnStop.classList.remove('visible');
+      btnCampaign.textContent = '⏹ Campaña detenida';
+      progressText.textContent = '';
+      running = false;
+    });
+
+    // ── Polling ──
+    function startPolling() {
+      stopPolling(); // clear any previous
+      pollTimer = setInterval(pollStatus, 3000);
+      pollStatus(); // immediate first tick
+    }
+
+    function stopPolling() {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+
+    async function pollStatus() {
+      let status;
+      try {
+        const res = await fetch('/api/queue/status');
+        status = await res.json();
+      } catch { return; }
+
+      const { pending, calling, done, error, cancelled, total, items } = status;
+
+      // Update per-row badges
+      (items || []).forEach(item => {
+        const debtor = idToDebtor[item.id];
+        if (!debtor) return;
+        const s = item.status;
+        if      (s === 'calling')   setStatus(debtor, 'calling');
+        else if (s === 'done')      setStatus(debtor, 'calling'); // call initiated, outcome TBD
+        else if (s === 'error')     setStatus(debtor, 'error-retry', item.error);
+        else if (s === 'cancelled') setStatus(debtor, 'error', 'Cancelado');
+        // 'pending' stays as badge-pending (no change needed)
+      });
+
+      // Progress bar
+      const finished = done + error + (cancelled || 0);
+      progressBar.style.width = total > 0 ? `${(finished / total) * 100}%` : '0%';
+
+      const active = pending + calling;
+      if (active > 0) {
+        btnCampaign.innerHTML = `<span class="spinner"></span>Llamando — ${finished} de ${total}`;
+        progressText.textContent = `${pending} pendiente${pending !== 1 ? 's' : ''} · ${calling} en curso`;
+      }
+
+      // Done when nothing is pending or calling
+      if (active === 0 && running) {
+        stopPolling();
+        btnStop.classList.remove('visible');
+        btnCampaign.textContent = '✅ Campaña completada';
+        progressText.textContent = '';
+        running = false;
+        showSummary(total, done, error);
+      }
+    }
+
+    async function showSummary(total, initiated, errors) {
       let pendingRetries = 0;
       try {
         const rr = await fetch('/api/retries');
@@ -876,7 +948,6 @@
         pendingRetries = rd.pending || 0;
       } catch (_) {}
 
-      const initiated = done - errors;
       summaryEl.innerHTML = `
         <div class="summary-title">Resultados</div>
         <div class="summary-grid">
@@ -890,7 +961,7 @@
           </div>
           <div class="summary-stat">
             <div class="label">Promesas de pago</div>
-            <div class="value value-ptp">${ptpCount}</div>
+            <div class="value value-ptp">—</div>
           </div>
           <div class="summary-stat">
             <div class="label">Errores</div>
@@ -902,11 +973,7 @@
       `;
       summaryEl.classList.add('visible');
       summaryEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-      running = false;
-    });
-
-    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+    }
 
     // ── Modal ──
     soloLink.addEventListener('click', () => modalBackdrop.classList.add('open'));

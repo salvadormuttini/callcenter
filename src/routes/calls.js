@@ -13,6 +13,12 @@ function getTwilioClient() {
   return twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 }
 
+function isWithinCallHours() {
+  const now = new Date();
+  const hour = Number(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', hour: 'numeric', hour12: false }));
+  return hour >= 10 && hour < 17;
+}
+
 /**
  * POST /api/calls/outbound
  * Inicia una llamada saliente a un deudor.
@@ -30,6 +36,10 @@ function getTwilioClient() {
  */
 router.post('/outbound', async (req, res) => {
   const { to, debtor } = req.body;
+
+  if (!isWithinCallHours()) {
+    return res.status(403).json({ error: 'Fuera de horario permitido. Llamadas permitidas entre 10:00 y 17:00 hs (Argentina)' });
+  }
 
   if (!to || !debtor) {
     return res.status(400).json({ error: 'Se requieren "to" (número) y "debtor" (datos del deudor)' });
@@ -84,6 +94,10 @@ router.post('/outbound', async (req, res) => {
  */
 router.post('/custom', async (req, res) => {
   const { to, contactName, greeting, systemPrompt } = req.body;
+
+  if (!isWithinCallHours()) {
+    return res.status(403).json({ error: 'Fuera de horario permitido. Llamadas permitidas entre 10:00 y 17:00 hs (Argentina)' });
+  }
 
   if (!to) {
   return res.status(400).json({ error: 'Se requiere "to"' });

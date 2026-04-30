@@ -9,6 +9,7 @@ const path    = require('path');
 const fs      = require('fs');
 
 const { handleMediaStream } = require('./src/routes/media-stream');
+const { startProcessor }   = require('./src/services/retryQueue');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -125,6 +126,11 @@ app.get('/api/test/deepgram', async (req, res) => {
 
 app.use('/api/calls', callsRoutes);
 
+app.get('/api/retries', (req, res) => {
+  const { queue } = require('./src/services/retryQueue');
+  res.json({ pending: queue.length, entries: queue.map(e => ({ phone: e.phone, retryAt: new Date(e.retryAt).toISOString(), attempts: e.attempts })) });
+});
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -155,6 +161,8 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 // ─── Inicio ───────────────────────────────────────────────────────────────────
+startProcessor();
+
 server.listen(PORT, () => {
   console.log(`\n🤖 Cole Call Center — Media Streams`);
   console.log(`   Puerto        : http://localhost:${PORT}`);

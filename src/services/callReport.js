@@ -6,6 +6,7 @@ const { sendWhatsAppReport } = require('./whatsapp');
 const { appendCallReport } = require('./googleSheets');
 const { appendAnalytics } = require('./analyticsSheet');
 const { BML_CODES } = require('../config/bml-codes');
+const { addToRetry, RETRY_CODES } = require('./retryQueue');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -132,6 +133,14 @@ console.log('[Report] EMAIL:', emailResult.status, emailResult.reason?.message |
 console.log('[Report] WHATSAPP:', whatsappResult.status, whatsappResult.reason?.message || 'OK');
 console.log('[Report] SHEETS:', sheetsResult.status, sheetsResult.reason?.message || 'OK');
 console.log('[Report] ANALYTICS:', analyticsResult.status, analyticsResult.reason?.message || 'OK');
+
+  // Retry scheduling for no-contact BML codes
+  const bml = analysis.categorizacion?.toUpperCase();
+  if (RETRY_CODES.has(bml)) {
+    const phone      = session.debtorInfo?.phone;
+    const pastAttempts = session.debtorInfo?._retryAttempt || 0;
+    if (phone) addToRetry(phone, session.debtorInfo, pastAttempts);
+  }
 }
 
 module.exports = { generateAndSendReport };

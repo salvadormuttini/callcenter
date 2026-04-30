@@ -797,6 +797,15 @@
       btnCampaign.textContent = '✅ Campaña completada';
 
       const initiated = done - errors;
+
+      // Fetch pending retries from server
+      let pendingRetries = 0;
+      try {
+        const rr = await fetch('/api/retries');
+        const rd = await rr.json();
+        pendingRetries = rd.pending || 0;
+      } catch (_) {}
+
       summaryEl.innerHTML = `
         <div class="summary-title">📊 Resultados</div>
         <div class="summary-grid">
@@ -817,6 +826,7 @@
             <div class="value value-error">${errors}</div>
           </div>
         </div>
+        ${pendingRetries > 0 ? `<div style="margin-bottom:14px;font-size:0.88rem;color:var(--yellow)">🔄 Reintentos programados: ${pendingRetries} (en 2 hs)</div>` : ''}
         <a class="sheets-link" href="${SHEETS_URL}" target="_blank" rel="noopener">
           📄 Ver detalle completo →
         </a>

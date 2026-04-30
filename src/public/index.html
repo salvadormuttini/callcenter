@@ -3,215 +3,745 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cole — Panel de Control</title>
+  <title>Cole</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg:        #0f0f0f;
+      --surface:   #1a1a1a;
+      --border:    #2a2a2a;
+      --blue:      #3b82f6;
+      --blue-dim:  #1d4ed8;
+      --text:      #f5f5f5;
+      --muted:     #737373;
+      --green:     #22c55e;
+      --yellow:    #eab308;
+      --red:       #ef4444;
+      --cyan:      #38bdf8;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 40px 16px;
+      padding: 48px 16px 80px;
+      gap: 40px;
     }
 
+    /* ── HEADER ── */
     header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -2px;
+      color: var(--text);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.4px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── MAIN COLUMN ── */
+    .main {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ── DROPZONE ── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 56px 32px;
       text-align: center;
-      margin-bottom: 40px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--surface);
+      position: relative;
     }
 
-    header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: #58a6ff;
+    .dropzone:hover, .dropzone.over {
+      border-color: var(--blue);
+      background: #1a1a2e;
     }
 
-    header p {
-      margin-top: 6px;
-      font-size: 0.9rem;
-      color: #8b949e;
-    }
-
-    .card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 12px;
-      padding: 32px;
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
       width: 100%;
-      max-width: 480px;
+      height: 100%;
     }
 
-    .field {
-      margin-bottom: 20px;
-    }
-
-    label {
+    .drop-icon {
+      font-size: 2.8rem;
+      margin-bottom: 14px;
       display: block;
+      pointer-events: none;
+    }
+
+    .drop-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      pointer-events: none;
+    }
+
+    .drop-sub {
       font-size: 0.85rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .drop-sub span {
+      color: var(--blue);
+    }
+
+    .file-name {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: var(--green);
       font-weight: 600;
-      color: #8b949e;
-      margin-bottom: 6px;
+      pointer-events: none;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      display: none;
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .table-wrap.visible { display: block; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    thead th {
+      background: #111;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.72rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
     }
 
-    input {
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #1f1f1f; }
+
+    tbody td {
+      padding: 12px 16px;
+      vertical-align: middle;
+    }
+
+    .td-name  { font-weight: 600; }
+    .td-phone { color: var(--muted); font-size: 0.84rem; }
+    .td-monto { font-variant-numeric: tabular-nums; }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-pending  { background: #222; color: var(--muted); }
+    .badge-calling  { background: #2d2600; color: var(--yellow); animation: flash 1s ease-in-out infinite; }
+    .badge-ptp      { background: #052e16; color: var(--green); }
+    .badge-noanswer { background: #2d1010; color: var(--red); }
+    .badge-scheduled{ background: #0c1a2e; color: var(--cyan); }
+    .badge-error    { background: #2d1010; color: var(--red); }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
+    /* ── CTA BUTTON ── */
+    .cta-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn-main {
       width: 100%;
-      padding: 12px 14px;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      color: #e6edf3;
-      font-size: 1rem;
-      transition: border-color 0.15s;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #58a6ff;
-    }
-
-    input::placeholder {
-      color: #484f58;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 8px;
-      background: #1f6feb;
+      max-width: 400px;
+      padding: 18px 32px;
+      background: var(--blue);
       color: #fff;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+      border-radius: 14px;
+      font-size: 1.1rem;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
     }
 
-    button:hover:not(:disabled) { background: #388bfd; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-main:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); }
+    .btn-main:active:not(:disabled){ transform: translateY(0); }
+    .btn-main:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
-    .status {
-      margin-top: 20px;
-      padding: 14px 16px;
-      border-radius: 8px;
-      font-size: 0.9rem;
+    .progress-text {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+      min-height: 20px;
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      max-width: 400px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
       display: none;
     }
 
-    .status.success {
+    .progress-bar-wrap.visible { display: block; }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    /* ── SUMMARY ── */
+    .summary {
+      display: none;
+      background: #052e16;
+      border: 1px solid #166534;
+      border-radius: 12px;
+      padding: 20px 24px;
+      font-size: 0.9rem;
+      color: var(--green);
+      text-align: center;
+    }
+
+    .summary.visible { display: block; }
+    .summary strong  { font-size: 1.05rem; display: block; margin-bottom: 6px; }
+    .summary .stats  { color: #86efac; font-size: 0.83rem; margin-top: 4px; }
+
+    /* ── INDIVIDUAL LINK ── */
+    .solo-link {
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s;
+    }
+
+    .solo-link:hover { color: var(--blue); }
+
+    /* ── MODAL ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .modal h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .field { margin-bottom: 16px; }
+
+    label {
       display: block;
-      background: #0d2818;
-      border: 1px solid #238636;
-      color: #3fb950;
-    }
-
-    .status.error {
-      display: block;
-      background: #2d1117;
-      border: 1px solid #da3633;
-      color: #f85149;
-    }
-
-    .status .sid {
-      margin-top: 6px;
-      font-size: 0.78rem;
-      color: #8b949e;
-      word-break: break-all;
-    }
-
-    footer {
-      margin-top: 40px;
       font-size: 0.75rem;
-      color: #484f58;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="tel"],
+    input[type="number"] {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: var(--blue); }
+    input::placeholder { color: #444; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 12px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+    .btn-call {
+      flex: 2;
+      padding: 12px;
+      background: var(--blue);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-call:hover { background: #2563eb; }
+    .btn-call:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .modal-status {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      min-height: 20px;
+      text-align: center;
+    }
+
+    .modal-status.ok  { color: var(--green); }
+    .modal-status.err { color: var(--red); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 480px) {
+      .logo { font-size: 2.2rem; }
+      .dropzone { padding: 40px 20px; }
+      .btn-main { font-size: 1rem; padding: 16px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- HEADER -->
   <header>
-    <h1>Cole</h1>
-    <p>Panel de Control — BML Collection Services</p>
+    <div class="logo">COLE</div>
+    <div class="status-pill"><span class="dot"></span> Sistema activo</div>
   </header>
 
-  <div class="card">
-    <form id="callForm">
-      <div class="field">
-        <label for="name">Nombre completo</label>
-        <input id="name" name="name" type="text" placeholder="Juan García" required />
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- DROPZONE -->
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+      <span class="drop-icon">📂</span>
+      <div class="drop-title">Arrastrá tu cartera acá</div>
+      <div class="drop-sub">o hacé click para seleccionar (<span>.csv</span> o <span>.xlsx</span>)</div>
+      <div class="drop-sub" style="margin-top:10px">Columnas: <span>nombre · telefono · monto · dias_mora</span></div>
+      <div class="file-name" id="fileName"></div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap" id="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Monto</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary" id="summary"></div>
+
+    <!-- CTA -->
+    <div class="cta-wrap">
+      <button class="btn-main" id="btnCampaign" disabled>INICIAR CAMPAÑA</button>
+      <div class="progress-bar-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
       </div>
+      <div class="progress-text" id="progressText"></div>
+      <button class="solo-link" id="soloLink">Llamada individual →</button>
+    </div>
 
-      <div class="field">
-        <label for="phone">Teléfono</label>
-        <input id="phone" name="phone" type="tel" placeholder="+5491112345678" required />
-      </div>
-
-      <div class="field">
-        <label for="amount">Monto adeudado (pesos)</label>
-        <input id="amount" name="amount" type="number" min="1" placeholder="50000" required />
-      </div>
-
-      <div class="field">
-        <label for="daysOverdue">Días de mora</label>
-        <input id="daysOverdue" name="daysOverdue" type="number" min="1" placeholder="30" required />
-      </div>
-
-      <button type="submit" id="btn">LLAMAR AHORA</button>
-    </form>
-
-    <div class="status" id="status"></div>
   </div>
 
-  <footer>Cole v1.0 · Be Eme Ele Collection Services</footer>
+  <!-- MODAL: LLAMADA INDIVIDUAL -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <h2>Llamada individual</h2>
+      <div class="field">
+        <label>Nombre completo</label>
+        <input type="text" id="mName" placeholder="Juan García" />
+      </div>
+      <div class="field">
+        <label>Teléfono</label>
+        <input type="tel" id="mPhone" placeholder="+5491112345678" />
+      </div>
+      <div class="field">
+        <label>Monto adeudado ($)</label>
+        <input type="number" id="mAmount" placeholder="50000" min="1" />
+      </div>
+      <div class="field">
+        <label>Días de mora</label>
+        <input type="number" id="mDays" placeholder="30" min="1" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btnModalClose">Cancelar</button>
+        <button class="btn-call" id="btnModalCall">📞 Llamar</button>
+      </div>
+      <div class="modal-status" id="modalStatus"></div>
+    </div>
+  </div>
 
   <script>
-    const form   = document.getElementById('callForm');
-    const btn    = document.getElementById('btn');
-    const status = document.getElementById('status');
+  (() => {
+    'use strict';
 
-    form.addEventListener('submit', async (e) => {
+    // ── State ──
+    let debtors = [];      // { name, phone, amount, daysOverdue, status, rowEl }
+    let running = false;
+
+    // ── Elements ──
+    const dropzone      = document.getElementById('dropzone');
+    const fileInput     = document.getElementById('fileInput');
+    const fileName      = document.getElementById('fileName');
+    const tableWrap     = document.getElementById('tableWrap');
+    const tableBody     = document.getElementById('tableBody');
+    const btnCampaign   = document.getElementById('btnCampaign');
+    const progressWrap  = document.getElementById('progressWrap');
+    const progressBar   = document.getElementById('progressBar');
+    const progressText  = document.getElementById('progressText');
+    const summaryEl     = document.getElementById('summary');
+    const soloLink      = document.getElementById('soloLink');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const btnModalClose = document.getElementById('btnModalClose');
+    const btnModalCall  = document.getElementById('btnModalCall');
+    const modalStatus   = document.getElementById('modalStatus');
+
+    // ── Drag & drop ──
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
+    dropzone.addEventListener('drop', e => {
       e.preventDefault();
-      btn.disabled = true;
-      btn.textContent = 'Iniciando llamada…';
-      status.className = 'status';
-      status.innerHTML = '';
+      dropzone.classList.remove('over');
+      const f = e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
 
-      const body = {
-        name:        document.getElementById('name').value.trim(),
-        phone:       document.getElementById('phone').value.trim(),
-        amount:      Number(document.getElementById('amount').value),
-        daysOverdue: Number(document.getElementById('daysOverdue').value),
+    // ── File handling ──
+    function handleFile(file) {
+      fileName.textContent = '📄 ' + file.name;
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'csv') {
+        const reader = new FileReader();
+        reader.onload = e => parseCSV(e.target.result);
+        reader.readAsText(file, 'UTF-8');
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        fileName.textContent += ' — (Excel no soportado directamente, convertí a .csv primero)';
+      } else {
+        fileName.textContent = '❌ Formato no soportado';
+      }
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return;
+
+      const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+      const idx = {
+        nombre:    headers.findIndex(h => h.includes('nombre')),
+        telefono:  headers.findIndex(h => h.includes('tel') || h.includes('phone')),
+        monto:     headers.findIndex(h => h.includes('monto') || h.includes('amount')),
+        dias_mora: headers.findIndex(h => h.includes('dia') || h.includes('mora') || h.includes('day')),
       };
 
+      debtors = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(/[,;]/).map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols.length < 2) continue;
+        const name  = idx.nombre   >= 0 ? cols[idx.nombre]   : '';
+        const phone = idx.telefono >= 0 ? cols[idx.telefono] : '';
+        const amount = idx.monto   >= 0 ? Number(cols[idx.monto].replace(/[^0-9.]/g,'')) || 0 : 0;
+        const days   = idx.dias_mora >= 0 ? Number(cols[idx.dias_mora]) || 0 : 0;
+        if (!name && !phone) continue;
+        debtors.push({ name, phone, amount, daysOverdue: days, status: 'pending' });
+      }
+
+      renderTable();
+      updateCTA();
+    }
+
+    // ── Table ──
+    function renderTable() {
+      tableBody.innerHTML = '';
+      debtors.forEach((d, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="td-name">${esc(d.name)}</td>
+          <td class="td-phone">${esc(d.phone)}</td>
+          <td class="td-monto">${d.amount ? '$' + d.amount.toLocaleString('es-AR') : '—'}</td>
+          <td class="td-status">${badge('pending')}</td>
+        `;
+        d.rowEl = tr;
+        tableBody.appendChild(tr);
+      });
+      tableWrap.classList.add('visible');
+      summaryEl.classList.remove('visible');
+    }
+
+    function setStatus(debtor, status, note) {
+      debtor.status = status;
+      const td = debtor.rowEl?.querySelector('.td-status');
+      if (td) td.innerHTML = badge(status, note);
+    }
+
+    function badge(status, note) {
+      const map = {
+        pending:   ['badge-pending',  '⏳ Pendiente'],
+        calling:   ['badge-calling',  '📞 Llamando'],
+        ptp:       ['badge-ptp',      '✅ Prometió pagar'],
+        noanswer:  ['badge-noanswer', '❌ No atendió'],
+        scheduled: ['badge-scheduled','📅 Agendó'],
+        error:     ['badge-error',    '⚠️ Error'],
+      };
+      const [cls, label] = map[status] || map.pending;
+      return `<span class="badge ${cls}">${label}${note ? ' · ' + esc(note) : ''}</span>`;
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── CTA state ──
+    function updateCTA() {
+      if (running) return;
+      const count = debtors.length;
+      btnCampaign.disabled = count === 0;
+      btnCampaign.textContent = count > 0 ? `INICIAR CAMPAÑA — Llamar a ${count} deudores` : 'INICIAR CAMPAÑA';
+      progressText.textContent = '';
+    }
+
+    // ── Campaign ──
+    btnCampaign.addEventListener('click', async () => {
+      if (running || debtors.length === 0) return;
+      running = true;
+      summaryEl.classList.remove('visible');
+      btnCampaign.disabled = true;
+      progressWrap.classList.add('visible');
+
+      let done = 0, ptp = 0, errors = 0;
+      const total = debtors.length;
+
+      for (const debtor of debtors) {
+        setStatus(debtor, 'calling');
+        progressText.textContent = `Llamando ${done + 1} de ${total}…`;
+        progressBar.style.width = `${(done / total) * 100}%`;
+        btnCampaign.textContent = `Llamando ${done + 1} de ${total}…`;
+
+        try {
+          const res = await fetch('/api/calls/outbound', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: debtor.phone,
+              debtor: {
+                name:        debtor.name,
+                amount:      debtor.amount,
+                daysOverdue: debtor.daysOverdue,
+              },
+            }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            // Optimistic: mark as calling until webhook updates (future)
+            // For now show "Llamando" — campaign keeps moving
+            setStatus(debtor, 'calling');
+          } else {
+            setStatus(debtor, 'error', data.error || `HTTP ${res.status}`);
+            errors++;
+          }
+        } catch (err) {
+          setStatus(debtor, 'error', err.message);
+          errors++;
+        }
+
+        done++;
+
+        if (done < total) {
+          // 5 second delay between calls
+          await delay(5000);
+        }
+      }
+
+      // Final
+      progressBar.style.width = '100%';
+      progressText.textContent = '';
+
+      const ok = done - errors;
+      summaryEl.innerHTML = `
+        <strong>✅ Campaña completada</strong>
+        <div class="stats">${ok} llamadas iniciadas · ${errors} errores · ${total} total</div>
+      `;
+      summaryEl.classList.add('visible');
+
+      btnCampaign.textContent = 'Campaña completada';
+      btnCampaign.disabled = true;
+      running = false;
+    });
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ── Modal: llamada individual ──
+    soloLink.addEventListener('click', () => modalBackdrop.classList.add('open'));
+    btnModalClose.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeModal(); });
+
+    function closeModal() {
+      modalBackdrop.classList.remove('open');
+      modalStatus.textContent = '';
+      modalStatus.className = 'modal-status';
+    }
+
+    btnModalCall.addEventListener('click', async () => {
+      const name   = document.getElementById('mName').value.trim();
+      const phone  = document.getElementById('mPhone').value.trim();
+      const amount = Number(document.getElementById('mAmount').value);
+      const days   = Number(document.getElementById('mDays').value);
+
+      if (!name || !phone) {
+        modalStatus.className = 'modal-status err';
+        modalStatus.textContent = 'Completá nombre y teléfono.';
+        return;
+      }
+
+      btnModalCall.disabled = true;
+      btnModalCall.textContent = 'Llamando…';
+      modalStatus.textContent = '';
+      modalStatus.className = 'modal-status';
+
       try {
-        const res  = await fetch('/api/calls/outbound', {
-          method:  'POST',
+        const res = await fetch('/api/calls/outbound', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(body),
+          body: JSON.stringify({
+            to: phone,
+            debtor: { name, amount, daysOverdue: days },
+          }),
         });
         const data = await res.json();
 
         if (res.ok) {
-          status.className = 'status success';
-          status.innerHTML = `✅ Llamada iniciada<div class="sid">CallSid: ${data.callSid || data.sid || '—'}</div>`;
-          form.reset();
+          modalStatus.className = 'modal-status ok';
+          modalStatus.textContent = `✅ Llamada iniciada · ${data.callSid || ''}`;
         } else {
-          throw new Error(data.error || data.message || `HTTP ${res.status}`);
+          throw new Error(data.error || `HTTP ${res.status}`);
         }
       } catch (err) {
-        status.className = 'status error';
-        status.textContent = `❌ Error: ${err.message}`;
+        modalStatus.className = 'modal-status err';
+        modalStatus.textContent = `❌ ${err.message}`;
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'LLAMAR AHORA';
+        btnModalCall.disabled = false;
+        btnModalCall.textContent = '📞 Llamar';
       }
     });
+
+  })();
   </script>
 
 </body>

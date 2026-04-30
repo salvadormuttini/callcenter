@@ -7,13 +7,32 @@ const { appendCallReport } = require('./googleSheets');
 const { appendAnalytics } = require('./analyticsSheet');
 const { BML_CODES } = require('../config/bml-codes');
 const { addToRetry, RETRY_CODES } = require('./retryQueue');
+const { log } = require('./logger');
+const { Resend } = require('resend');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const resend  = new Resend(process.env.RESEND_API_KEY);
 
-/**
- * Analiza la conversación con Claude y envía el reporte por email.
- * Se llama al finalizar cada llamada con turnos de conversación.
- */
+async function sendErrorAlert(debtorName, callSid, err) {
+  try {
+    await resend.emails.send({
+      from:    'Cole Call Center <onboarding@resend.dev>',
+      to:      'salvadormuttini@gmail.com',
+      subject: `⚠️ Cole — Error en llamada a ${debtorName}`,
+      html: `
+        <h2>⚠️ Error en reporte de llamada</h2>
+        <p><b>Deudor:</b> ${debtorName}</p>
+        <p><b>CallSid:</b> ${callSid}</p>
+        <p><b>Timestamp:</b> ${new Date().toISOString()}</p>
+        <p><b>Error:</b> ${err?.message || String(err)}</p>
+        <pre style="background:#f5f5f5;padding:12px;border-radius:6px">${err?.stack || ''}</pre>
+      `,
+    });
+  } catch (alertErr) {
+    log.error('Report', 'No se pudo enviar alerta de error', { alertErr: alertErr.message });
+  }
+}
+
 async function generateAndSendReport(session, callSid, callStatus) {
   if (!session || session.history.length < 2) return;
 
@@ -61,13 +80,20 @@ ${turns}
 
 Respondé SOLO con el JSON, sin texto adicional.`;
 
- console.log('[Report] pidiendo análisis a Claude');
-const response = await client.messages.create({
-  model: 'claude-haiku-4-5',
-  max_tokens: 512,
-  messages: [{ role: 'user', content: prompt }],
-});
-console.log('[Report] Claude respondió');
+  let response;
+  try {
+    log.call(session.debtorInfo?.phone, debtorName, 'report-start', { callSid, callStatus });
+    response = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    log.info('Report', 'Claude respondió', { callSid });
+  } catch (err) {
+    log.error('Report', 'Error al llamar a Claude', { callSid, error: err.message });
+    await sendErrorAlert(debtorName, callSid, err);
+    throw err;
+  }
 
   const raw = response.content.find(b => b.type === 'text')?.text || '{}';
 
@@ -129,18 +155,27 @@ const [emailResult, whatsappResult, sheetsResult, analyticsResult] = await Promi
     appendCallReport(reportData),
     appendAnalytics(reportData),
   ]);
-console.log('[Report] EMAIL:', emailResult.status, emailResult.reason?.message || 'OK');
-console.log('[Report] WHATSAPP:', whatsappResult.status, whatsappResult.reason?.message || 'OK');
-console.log('[Report] SHEETS:', sheetsResult.status, sheetsResult.reason?.message || 'OK');
-console.log('[Report] ANALYTICS:', analyticsResult.status, analyticsResult.reason?.message || 'OK');
+  log.info('Report', `EMAIL:${emailResult.status} WA:${whatsappResult.status} SHEETS:${sheetsResult.status} ANALYTICS:${analyticsResult.status}`, { callSid });
+
+  if (emailResult.status === 'rejected')
+    log.error('Report', 'Email falló', { callSid, error: emailResult.reason?.message });
+  if (sheetsResult.status === 'rejected')
+    log.error('Report', 'Sheets falló', { callSid, error: sheetsResult.reason?.message });
+  if (analyticsResult.status === 'rejected')
+    log.error('Report', 'Analytics falló', { callSid, error: analyticsResult.reason?.message });
 
   // Retry scheduling for no-contact BML codes
   const bml = analysis.categorizacion?.toUpperCase();
   if (RETRY_CODES.has(bml)) {
     const phone      = session.debtorInfo?.phone;
     const pastAttempts = session.debtorInfo?._retryAttempt || 0;
-    if (phone) addToRetry(phone, session.debtorInfo, pastAttempts);
+    if (phone) {
+      addToRetry(phone, session.debtorInfo, pastAttempts);
+      log.retry(phone, pastAttempts + 1, 'agendado');
+    }
   }
+
+  log.call(session.debtorInfo?.phone, debtorName, 'report-done', { callSid, bml });
 }
 
 module.exports = { generateAndSendReport };

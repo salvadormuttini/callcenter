@@ -10,6 +10,8 @@ const fs      = require('fs');
 
 const { handleMediaStream } = require('./src/routes/media-stream');
 const { startProcessor }   = require('./src/services/retryQueue');
+const { log, readLastLines } = require('./src/services/logger');
+const { Resend }             = require('resend');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -126,6 +128,12 @@ app.get('/api/test/deepgram', async (req, res) => {
 
 app.use('/api/calls', callsRoutes);
 
+app.get('/api/logs', (req, res) => {
+  const lines = readLastLines(50);
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.send(lines.join('\n') || '(sin logs)');
+});
+
 app.get('/api/retries', (req, res) => {
   const { queue } = require('./src/services/retryQueue');
   res.json({ pending: queue.length, entries: queue.map(e => ({ phone: e.phone, retryAt: new Date(e.retryAt).toISOString(), attempts: e.attempts })) });
@@ -161,7 +169,67 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 // ─── Inicio ───────────────────────────────────────────────────────────────────
+// ─── Health monitoring ────────────────────────────────────────────────────────
+const HEALTH_INTERVAL = 30 * 60 * 1000; // 30 minutes
+
+async function runHealthCheck() {
+  const axios   = require('axios');
+  const twilio  = require('twilio');
+  const results = {};
+
+  // Twilio
+  try {
+    const c = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    await c.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
+    results.twilio = 'ok';
+  } catch (e) { results.twilio = e.message; }
+
+  // ElevenLabs
+  try {
+    await axios.get('https://api.elevenlabs.io/v1/user', {
+      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY }, timeout: 8000,
+    });
+    results.elevenlabs = 'ok';
+  } catch (e) { results.elevenlabs = e.message; }
+
+  // Deepgram
+  try {
+    await axios.get('https://api.deepgram.com/v1/projects', {
+      headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}` }, timeout: 8000,
+    });
+    results.deepgram = 'ok';
+  } catch (e) { results.deepgram = e.message; }
+
+  // Google Sheets (lightweight: check env only — full auth check is too expensive)
+  results.sheets = process.env.GOOGLE_SERVICE_ACCOUNT_JSON ? 'ok (env set)' : 'missing env';
+
+  const failed = Object.entries(results).filter(([, v]) => v !== 'ok' && !v.startsWith('ok'));
+
+  if (failed.length > 0) {
+    log.warn('Health', 'Servicios con fallo', Object.fromEntries(failed));
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      await resend.emails.send({
+        from:    'Cole Call Center <onboarding@resend.dev>',
+        to:      'salvadormuttini@gmail.com',
+        subject: `🚨 Cole — ${failed.length} servicio(s) con fallo`,
+        html: `
+          <h2>🚨 Alerta de salud — Cole</h2>
+          <p><b>Timestamp:</b> ${new Date().toISOString()}</p>
+          <ul>${failed.map(([svc, err]) => `<li><b>${svc}:</b> ${err}</li>`).join('')}</ul>
+          <p>Revisá los logs en <code>GET /api/logs</code>.</p>
+        `,
+      });
+    } catch (alertErr) {
+      log.error('Health', 'No se pudo enviar alerta', { error: alertErr.message });
+    }
+  } else {
+    log.info('Health', 'Todos los servicios OK', results);
+  }
+}
+
 startProcessor();
+setInterval(runHealthCheck, HEALTH_INTERVAL);
 
 server.listen(PORT, () => {
   console.log(`\n🤖 Cole Call Center — Media Streams`);

@@ -1,6 +1,7 @@
 'use strict';
 
 const twilio = require('twilio');
+const { log } = require('./logger');
 
 const RETRY_CODES  = new Set(['NADA', 'APAG', 'MENS', 'OCUP', 'NONO', 'CORT', 'VOLTA']);
 const MAX_ATTEMPTS = 3;
@@ -16,7 +17,7 @@ function addToRetry(phone, debtorInfo, attempts = 1) {
   }
   const retryAt = Date.now() + RETRY_DELAY;
   queue.push({ phone, debtorInfo, retryAt, attempts });
-  console.log(`[Retry] Agendado intento ${attempts + 1} para ${phone} a las ${new Date(retryAt).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`);
+  log.retry(phone, attempts + 1, `agendado para ${new Date(retryAt).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`);
 }
 
 function isWithinCallHours() {
@@ -40,7 +41,7 @@ async function processRetries() {
     const idx = queue.indexOf(entry);
     if (idx !== -1) queue.splice(idx, 1);
 
-    console.log(`[Retry] Reintentando ${entry.phone} (intento ${entry.attempts + 1})`);
+    log.retry(entry.phone, entry.attempts + 1, 'ejecutando');
     try {
       const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
       const { createSession } = require('./conversation');

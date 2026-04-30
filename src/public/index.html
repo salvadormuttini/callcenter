@@ -261,21 +261,103 @@
       width: 0%;
     }
 
-    /* ── SUMMARY ── */
-    .summary {
+    /* ── UPLOAD FEEDBACK ── */
+    .upload-feedback {
       display: none;
       background: #052e16;
       border: 1px solid #166534;
-      border-radius: 12px;
-      padding: 20px 24px;
+      border-radius: 10px;
+      padding: 14px 18px;
       font-size: 0.9rem;
       color: var(--green);
-      text-align: center;
+      font-weight: 600;
+    }
+
+    .upload-feedback.visible { display: block; }
+
+    /* ── SPINNER ── */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* ── SUMMARY ── */
+    .summary {
+      display: none;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      font-size: 0.9rem;
     }
 
     .summary.visible { display: block; }
-    .summary strong  { font-size: 1.05rem; display: block; margin-bottom: 6px; }
-    .summary .stats  { color: #86efac; font-size: 0.83rem; margin-top: 4px; }
+
+    .summary-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--green);
+      margin-bottom: 16px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .summary-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .summary-stat .label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .summary-stat .value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .value-total   { color: var(--text); }
+    .value-ptp     { color: var(--green); }
+    .value-noanswer{ color: var(--red); }
+    .value-error   { color: var(--yellow); }
+
+    .sheets-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--blue);
+      text-decoration: none;
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      padding: 8px 14px;
+      transition: background 0.15s;
+    }
+
+    .sheets-link:hover { background: rgba(59,130,246,0.1); }
 
     /* ── INDIVIDUAL LINK ── */
     .solo-link {
@@ -424,6 +506,9 @@
       <div class="file-name" id="fileName"></div>
     </div>
 
+    <!-- UPLOAD FEEDBACK -->
+    <div class="upload-feedback" id="uploadFeedback"></div>
+
     <!-- TABLE -->
     <div class="table-wrap" id="tableWrap">
       <table>
@@ -490,22 +575,26 @@
     let debtors = [];      // { name, phone, amount, daysOverdue, status, rowEl }
     let running = false;
 
+    // ── Config ──
+    const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/15kL4w4-Qj2j0ZeApuoroe_aHk9NsBrQIL1JYYLIiRTc';
+
     // ── Elements ──
-    const dropzone      = document.getElementById('dropzone');
-    const fileInput     = document.getElementById('fileInput');
-    const fileName      = document.getElementById('fileName');
-    const tableWrap     = document.getElementById('tableWrap');
-    const tableBody     = document.getElementById('tableBody');
-    const btnCampaign   = document.getElementById('btnCampaign');
-    const progressWrap  = document.getElementById('progressWrap');
-    const progressBar   = document.getElementById('progressBar');
-    const progressText  = document.getElementById('progressText');
-    const summaryEl     = document.getElementById('summary');
-    const soloLink      = document.getElementById('soloLink');
-    const modalBackdrop = document.getElementById('modalBackdrop');
-    const btnModalClose = document.getElementById('btnModalClose');
-    const btnModalCall  = document.getElementById('btnModalCall');
-    const modalStatus   = document.getElementById('modalStatus');
+    const dropzone        = document.getElementById('dropzone');
+    const fileInput       = document.getElementById('fileInput');
+    const fileName        = document.getElementById('fileName');
+    const uploadFeedback  = document.getElementById('uploadFeedback');
+    const tableWrap       = document.getElementById('tableWrap');
+    const tableBody       = document.getElementById('tableBody');
+    const btnCampaign     = document.getElementById('btnCampaign');
+    const progressWrap    = document.getElementById('progressWrap');
+    const progressBar     = document.getElementById('progressBar');
+    const progressText    = document.getElementById('progressText');
+    const summaryEl       = document.getElementById('summary');
+    const soloLink        = document.getElementById('soloLink');
+    const modalBackdrop   = document.getElementById('modalBackdrop');
+    const btnModalClose   = document.getElementById('btnModalClose');
+    const btnModalCall    = document.getElementById('btnModalCall');
+    const modalStatus     = document.getElementById('modalStatus');
 
     // ── Drag & drop ──
     dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
@@ -560,13 +649,22 @@
       }
 
       renderTable();
+      showUploadFeedback();
       updateCTA();
     }
 
+    function showUploadFeedback() {
+      const count = debtors.length;
+      uploadFeedback.textContent = `✅ Archivo cargado: ${count} deudor${count !== 1 ? 'es' : ''} listo${count !== 1 ? 's' : ''} para llamar`;
+      uploadFeedback.classList.add('visible');
+    }
+
     // ── Table ──
-    function renderTable() {
+    function renderTable(previewOnly = true) {
       tableBody.innerHTML = '';
-      debtors.forEach((d, i) => {
+      const preview = previewOnly ? debtors.slice(0, 3) : debtors;
+
+      preview.forEach(d => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="td-name">${esc(d.name)}</td>
@@ -577,8 +675,33 @@
         d.rowEl = tr;
         tableBody.appendChild(tr);
       });
+
+      if (previewOnly && debtors.length > 3) {
+        const tr = document.createElement('tr');
+        tr.id = 'moreRow';
+        tr.innerHTML = `<td colspan="4" style="text-align:center;color:var(--muted);font-size:0.83rem;padding:10px">
+          … y ${debtors.length - 3} deudores más</td>`;
+        tableBody.appendChild(tr);
+      }
+
       tableWrap.classList.add('visible');
       summaryEl.classList.remove('visible');
+    }
+
+    function expandTable() {
+      // Re-render all rows, preserving existing rowEl references
+      tableBody.innerHTML = '';
+      debtors.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="td-name">${esc(d.name)}</td>
+          <td class="td-phone">${esc(d.phone)}</td>
+          <td class="td-monto">${d.amount ? '$' + d.amount.toLocaleString('es-AR') : '—'}</td>
+          <td class="td-status">${badge('pending')}</td>
+        `;
+        d.rowEl = tr;
+        tableBody.appendChild(tr);
+      });
     }
 
     function setStatus(debtor, status, note) {
@@ -620,15 +743,22 @@
       summaryEl.classList.remove('visible');
       btnCampaign.disabled = true;
       progressWrap.classList.add('visible');
+      expandTable();
 
-      let done = 0, ptp = 0, errors = 0;
+      let done = 0, ptpCount = 0, noAnswerCount = 0, errors = 0;
       const total = debtors.length;
+
+      function setBtn(n) {
+        btnCampaign.innerHTML = `<span class="spinner"></span>Llamando ${n} de ${total}…`;
+      }
+
+      setBtn(0);
 
       for (const debtor of debtors) {
         setStatus(debtor, 'calling');
-        progressText.textContent = `Llamando ${done + 1} de ${total}…`;
+        setBtn(done + 1);
         progressBar.style.width = `${(done / total) * 100}%`;
-        btnCampaign.textContent = `Llamando ${done + 1} de ${total}…`;
+        debtor.rowEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
         try {
           const res = await fetch('/api/calls/outbound', {
@@ -647,11 +777,10 @@
           const data = await res.json();
 
           if (res.ok) {
-            // Optimistic: mark as calling until webhook updates (future)
-            // For now show "Llamando" — campaign keeps moving
             setStatus(debtor, 'calling');
           } else {
-            setStatus(debtor, 'error', data.error || `HTTP ${res.status}`);
+            const msg = data.error || `HTTP ${res.status}`;
+            setStatus(debtor, 'error', msg);
             errors++;
           }
         } catch (err) {
@@ -660,26 +789,41 @@
         }
 
         done++;
-
-        if (done < total) {
-          // 5 second delay between calls
-          await delay(5000);
-        }
+        if (done < total) await delay(5000);
       }
 
       // Final
       progressBar.style.width = '100%';
-      progressText.textContent = '';
+      btnCampaign.textContent = '✅ Campaña completada';
 
-      const ok = done - errors;
+      const initiated = done - errors;
       summaryEl.innerHTML = `
-        <strong>✅ Campaña completada</strong>
-        <div class="stats">${ok} llamadas iniciadas · ${errors} errores · ${total} total</div>
+        <div class="summary-title">📊 Resultados</div>
+        <div class="summary-grid">
+          <div class="summary-stat">
+            <div class="label">Total llamadas</div>
+            <div class="value value-total">${total}</div>
+          </div>
+          <div class="summary-stat">
+            <div class="label">Iniciadas</div>
+            <div class="value value-ptp">${initiated}</div>
+          </div>
+          <div class="summary-stat">
+            <div class="label">Prometieron pagar</div>
+            <div class="value value-ptp">${ptpCount}</div>
+          </div>
+          <div class="summary-stat">
+            <div class="label">Errores</div>
+            <div class="value value-error">${errors}</div>
+          </div>
+        </div>
+        <a class="sheets-link" href="${SHEETS_URL}" target="_blank" rel="noopener">
+          📄 Ver detalle completo →
+        </a>
       `;
       summaryEl.classList.add('visible');
+      summaryEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-      btnCampaign.textContent = 'Campaña completada';
-      btnCampaign.disabled = true;
       running = false;
     });
 

@@ -78,6 +78,16 @@
       letter-spacing: 0;
     }
 
+    .tagline {
+      margin-top: 12px;
+      font-size: 17px;
+      color: var(--sub);
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+
     .dot {
       width: 8px;
       height: 8px;
@@ -103,15 +113,25 @@
     /* ── UPLOAD FEEDBACK ── */
     .upload-feedback {
       display: none;
-      background: #f0faf3;
-      border-radius: var(--radius-sm);
-      padding: 14px 18px;
-      font-size: 15px;
-      color: #1c7a3b;
-      font-weight: 500;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
     }
 
     .upload-feedback.visible { display: block; }
+
+    .upload-feedback-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1c7a3b;
+      margin-bottom: 2px;
+    }
+
+    .upload-feedback-sub {
+      font-size: 14px;
+      color: var(--sub);
+    }
 
     /* ── DROPZONE ── */
     .dropzone {
@@ -163,6 +183,13 @@
     }
 
     .drop-sub .accent { color: var(--blue); font-weight: 500; }
+
+    .drop-micro {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #86868b;
+      pointer-events: none;
+    }
 
     .file-name {
       margin-top: 16px;
@@ -547,6 +574,7 @@
     <header>
       <div class="logo">Cole</div>
       <div class="status-pill"><span class="dot"></span> Sistema activo</div>
+      <p class="tagline">Cargá una cartera, iniciá una campaña y seguí los resultados.</p>
     </header>
 
     <!-- UPLOAD FEEDBACK -->
@@ -556,11 +584,11 @@
     <div class="dropzone" id="dropzone">
       <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
       <span class="drop-icon">📂</span>
-      <div class="drop-title">Arrastrá tu cartera acá</div>
-      <div class="drop-sub">o hacé clic para seleccionar<br>
-        <span class="accent">.csv</span> o <span class="accent">.xlsx</span> —
-        columnas: <span class="accent">nombre · teléfono · monto · dias_mora</span>
+      <div class="drop-title">Subí tu cartera</div>
+      <div class="drop-sub">Arrastrá un archivo .csv con columnas:<br>
+        <span class="accent">nombre · telefono · monto · dias_mora</span>
       </div>
+      <div class="drop-micro">Recomendado: probá primero con 10–20 deudores.</div>
       <div class="file-name" id="fileName"></div>
     </div>
 
@@ -584,12 +612,12 @@
 
     <!-- CTA -->
     <div class="cta-wrap">
-      <button class="btn-main" id="btnCampaign" disabled>Iniciar Campaña</button>
+      <button class="btn-main" id="btnCampaign" disabled>Iniciar campaña</button>
       <div class="progress-bar-wrap" id="progressWrap">
         <div class="progress-bar" id="progressBar"></div>
       </div>
       <div class="progress-text" id="progressText"></div>
-      <button class="solo-link" id="soloLink">Llamada individual →</button>
+      <button class="solo-link" id="soloLink">Hacer una llamada individual →</button>
     </div>
 
   </div>
@@ -704,7 +732,10 @@
 
     function showUploadFeedback() {
       const n = debtors.length;
-      uploadFeedback.textContent = `✅ Archivo cargado: ${n} deudor${n !== 1 ? 'es' : ''} listo${n !== 1 ? 's' : ''} para llamar`;
+      uploadFeedback.innerHTML = `
+        <div class="upload-feedback-title">Archivo cargado</div>
+        <div class="upload-feedback-sub">${n} deudor${n !== 1 ? 'es' : ''} listo${n !== 1 ? 's' : ''} para llamar</div>
+      `;
       uploadFeedback.classList.add('visible');
     }
 
@@ -778,7 +809,7 @@
       if (running) return;
       const n = debtors.length;
       btnCampaign.disabled = n === 0;
-      btnCampaign.textContent = n > 0 ? `Iniciar Campaña — ${n} deudores` : 'Iniciar Campaña';
+      btnCampaign.textContent = n > 0 ? `Iniciar campaña — ${n} deudores` : 'Iniciar campaña';
       progressText.textContent = '';
     }
 
@@ -850,7 +881,7 @@
         <div class="summary-title">Resultados</div>
         <div class="summary-grid">
           <div class="summary-stat">
-            <div class="label">Total</div>
+            <div class="label">Total llamadas</div>
             <div class="value value-total">${total}</div>
           </div>
           <div class="summary-stat">
@@ -858,7 +889,7 @@
             <div class="value value-ok">${initiated}</div>
           </div>
           <div class="summary-stat">
-            <div class="label">Prometieron pagar</div>
+            <div class="label">Promesas de pago</div>
             <div class="value value-ptp">${ptpCount}</div>
           </div>
           <div class="summary-stat">
@@ -867,7 +898,7 @@
           </div>
         </div>
         ${pendingRetries > 0 ? `<div class="retry-note">🔄 Reintentos programados: ${pendingRetries} — en 2 horas</div>` : ''}
-        <a class="sheets-link" href="${SHEETS_URL}" target="_blank" rel="noopener">Ver detalle completo →</a>
+        <a class="sheets-link" href="${SHEETS_URL}" target="_blank" rel="noopener">Ver detalle en Google Sheets →</a>
       `;
       summaryEl.classList.add('visible');
       summaryEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

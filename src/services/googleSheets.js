@@ -195,4 +195,67 @@ async function cancelAllPendingQueueItems() {
   });
 }
 
-module.exports = { appendCallReport, getSheetRows, saveQueueItem, updateQueueRow, loadPendingQueue, cancelAllPendingQueueItems };
+// ─── Dashboard tab ────────────────────────────────────────────────────────────
+
+const DASHBOARD_TAB = 'Dashboard';
+
+const DASHBOARD_LABELS = [
+  'Total llamadas',
+  'PTP (prometió pagar)',
+  'Tasa PTP %',
+  'Monto recuperado',
+  'Promedio por llamada',
+];
+
+const DASHBOARD_FORMULAS = [
+  "=COUNTA(FILTER('Hoja 1'!E:E,'Hoja 1'!E:E<>\"\"))",
+  "=COUNTIF(FILTER('Hoja 1'!E:E,'Hoja 1'!E:E<>\"\"),\"PROM\")",
+  '=IF(A1=0,0,ROUND(A2/A1*100,1))',
+  "=SUMIF(FILTER('Hoja 1'!F:F,'Hoja 1'!F:F<>\"\"),\">0\")",
+  '=IF(A1=0,0,ROUND(A4/A1,0))',
+];
+
+async function ensureDashboardTab(sheets, spreadsheetId) {
+  const meta   = await sheets.spreadsheets.get({ spreadsheetId });
+  const exists = meta.data.sheets.some(s => s.properties.title === DASHBOARD_TAB);
+  if (exists) return;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: { requests: [{ addSheet: { properties: { title: DASHBOARD_TAB } } }] },
+  });
+
+  // Write formulas in A1:A5 and labels in B1:B5
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: 'USER_ENTERED',
+      data: [
+        { range: `${DASHBOARD_TAB}!A1:A5`, values: DASHBOARD_FORMULAS.map(f => [f]) },
+        { range: `${DASHBOARD_TAB}!B1:B5`, values: DASHBOARD_LABELS.map(l => [l]) },
+      ],
+    },
+  });
+}
+
+async function readDashboard() {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return { total: 0, ptp: 0, rate: 0, amount: 0, average: 0 };
+
+  const sheets = buildSheetsClient();
+  await ensureDashboardTab(sheets, spreadsheetId);
+
+  const res  = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${DASHBOARD_TAB}!A1:A5` });
+  const vals = res.data.values || [];
+
+  const n = (i) => Number((vals[i] || [])[0]) || 0;
+  return {
+    total:   n(0),
+    ptp:     n(1),
+    rate:    n(2),
+    amount:  n(3),
+    average: n(4),
+  };
+}
+
+module.exports = { appendCallReport, getSheetRows, saveQueueItem, updateQueueRow, loadPendingQueue, cancelAllPendingQueueItems, readDashboard };

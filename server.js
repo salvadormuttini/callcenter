@@ -241,6 +241,17 @@ app.get('/api/logs', requireAuth, (req, res) => {
   res.send(lines.join('\n') || '(sin logs)');
 });
 
+app.get('/api/dashboard', requireAuth, async (req, res) => {
+  try {
+    const { readDashboard } = require('./src/services/googleSheets');
+    const data = await readDashboard();
+    res.json(data);
+  } catch (e) {
+    log.error('Dashboard', 'Error leyendo dashboard', { error: e.message });
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/retries', requireAuth, (req, res) => {
   const { queue } = require('./src/services/retryQueue');
   res.json({ pending: queue.length, entries: queue.map(e => ({ phone: e.phone, retryAt: new Date(e.retryAt).toISOString(), attempts: e.attempts })) });

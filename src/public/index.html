@@ -592,6 +592,76 @@
     .modal-status.ok  { color: #1c7a3b; }
     .modal-status.err { color: #c0392b; }
 
+    /* ── DASHBOARD CARD ── */
+    .dashboard-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-title {
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+
+    .dashboard-refresh {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .dashboard-stat {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+    }
+
+    .dashboard-stat .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .dashboard-stat .value {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .dashboard-stat.wide {
+      grid-column: span 2;
+    }
+
+    .dashboard-stat .value.green { color: #1c7a3b; }
+    .dashboard-stat .value.blue  { color: var(--blue); }
+
+    .dashboard-loading {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 12px 0;
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 480px) {
       body { padding: 40px 16px 80px; }
@@ -599,6 +669,7 @@
       .dropzone { padding: 44px 24px; }
       .btn-main { font-size: 16px; }
       .summary-grid { grid-template-columns: 1fr 1fr; }
+      .dashboard-grid { grid-template-columns: 1fr 1fr; }
       .modal { padding: 28px 24px; }
     }
   </style>
@@ -650,6 +721,15 @@
 
     <!-- SUMMARY -->
     <div class="summary" id="summary"></div>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard-card" id="dashboardCard">
+      <div class="dashboard-header">
+        <div class="dashboard-title">Resumen</div>
+        <div class="dashboard-refresh" id="dashboardRefreshLabel">actualizando…</div>
+      </div>
+      <div id="dashboardBody"><div class="dashboard-loading">Cargando…</div></div>
+    </div>
 
     <!-- CTA -->
     <div class="cta-wrap">
@@ -995,6 +1075,55 @@
       summaryEl.classList.add('visible');
       summaryEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
+
+    // ── Dashboard ──
+    const dashboardBody        = document.getElementById('dashboardBody');
+    const dashboardRefreshLabel = document.getElementById('dashboardRefreshLabel');
+
+    async function loadDashboard() {
+      try {
+        const res  = await fetch('/api/dashboard');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { total, ptp, rate, amount, average } = await res.json();
+
+        const fmt = n => Number(n).toLocaleString('es-AR');
+        const fmtPesos = n => '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
+
+        dashboardBody.innerHTML = `
+          <div class="dashboard-grid">
+            <div class="dashboard-stat">
+              <div class="label">Total llamadas</div>
+              <div class="value">${fmt(total)}</div>
+            </div>
+            <div class="dashboard-stat">
+              <div class="label">PTP</div>
+              <div class="value green">${fmt(ptp)}</div>
+            </div>
+            <div class="dashboard-stat">
+              <div class="label">Tasa PTP</div>
+              <div class="value blue">${rate}%</div>
+            </div>
+            <div class="dashboard-stat">
+              <div class="label">Promedio por llamada</div>
+              <div class="value">${fmtPesos(average)}</div>
+            </div>
+            <div class="dashboard-stat wide">
+              <div class="label">Monto recuperado</div>
+              <div class="value green">${fmtPesos(amount)}</div>
+            </div>
+          </div>
+        `;
+
+        const now = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        dashboardRefreshLabel.textContent = `actualizado ${now}`;
+      } catch (err) {
+        dashboardBody.innerHTML = `<div class="dashboard-loading">Error cargando datos</div>`;
+        dashboardRefreshLabel.textContent = 'error';
+      }
+    }
+
+    loadDashboard();
+    setInterval(loadDashboard, 30000);
 
     // ── Modal ──
     soloLink.addEventListener('click', () => modalBackdrop.classList.add('open'));

@@ -80,19 +80,33 @@ ${turns}
 
 Respondé SOLO con el JSON, sin texto adicional.`;
 
+  log.call(session.debtorInfo?.phone, debtorName, 'report-start', { callSid, callStatus });
+
   let response;
   try {
-    log.call(session.debtorInfo?.phone, debtorName, 'report-start', { callSid, callStatus });
     response = await client.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
     });
     log.info('Report', 'Claude respondió', { callSid });
-  } catch (err) {
-    log.error('Report', 'Error al llamar a Claude', { callSid, error: err.message });
-    await sendErrorAlert(debtorName, callSid, err);
-    throw err;
+  } catch (claudeErr) {
+    log.error('Report', 'Claude falló — guardando transcripción sin análisis', { callSid, error: claudeErr.message });
+    await sendErrorAlert(debtorName, callSid, claudeErr);
+
+    // Save raw transcript so call data is never lost
+    await appendCallReport({
+      debtorName,
+      callSid,
+      phone:      session.debtorInfo?.phone    || '',
+      email:      session.debtorInfo?.email    || '',
+      amountOwed: session.debtorInfo?.amount   || '',
+      daysOverdue:session.debtorInfo?.daysOverdue || '',
+      callResult: 'VOLTA',
+      notes:      `[Sin análisis — error Claude] Transcripción: ${turns.slice(0, 500)}`,
+    }).catch(e => log.error('Report', 'También falló el sheets de emergencia', { error: e.message }));
+
+    return; // exit — no further processing possible without analysis
   }
 
   const raw = response.content.find(b => b.type === 'text')?.text || '{}';

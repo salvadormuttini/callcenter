@@ -9,8 +9,30 @@ const { GREETING_TEMPLATE, UNKNOWN_GREETING } = require('../config/valentina');
 
 const BASE_URL = process.env.BASE_URL;
 
+const { log } = require('../services/logger');
+
 function getTwilioClient() {
   return twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+}
+
+const TWILIO_ERROR_MAP = {
+  21211: 'Número inválido',
+  21214: 'Número de teléfono no permitido',
+  21217: 'Número no puede recibir llamadas',
+  21401: 'SIP request inválido',
+  21215: 'Llamadas internacionales deshabilitadas',
+  13224: 'Número bloqueado por Twilio',
+  13225: 'Número en lista negra',
+  20003: 'Credenciales Twilio inválidas',
+  20404: 'Recurso Twilio no encontrado',
+  21604: 'Número origen no verificado',
+};
+
+function twilioErrorMessage(err) {
+  const code = err.code || err.status;
+  if (TWILIO_ERROR_MAP[code]) return `${TWILIO_ERROR_MAP[code]} (${code})`;
+  if (code >= 20000 && code < 22000) return `Error Twilio ${code}: ${err.message}`;
+  return err.message;
 }
 
 function isWithinCallHours() {
@@ -64,18 +86,20 @@ router.post('/outbound', async (req, res) => {
 
     // El saludo lo genera el WebSocket handler al conectar
     conversation.create(call.sid, debtor);
-    console.log(`[Twilio] Llamada iniciada a ${to}. SID: ${call.sid}`);
+    log.call(to, debtor.name, 'outbound-initiated', { callSid: call.sid });
 
     res.json({
       success: true,
       callSid: call.sid,
-      status: call.status,
+      status:  call.status,
       to,
-      debtor: debtor.name,
+      debtor:  debtor.name,
     });
   } catch (err) {
-    console.error('[Twilio] Error iniciando llamada:', err.message);
-    res.status(500).json({ error: err.message });
+    const msg = twilioErrorMessage(err);
+    log.error('Calls', 'Error iniciando llamada', { to, error: msg, code: err.code });
+    const httpStatus = (err.code >= 20000 && err.code < 21000) ? 502 : 400;
+    res.status(httpStatus).json({ error: msg, code: err.code || null });
   }
 });
 

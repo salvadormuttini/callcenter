@@ -236,7 +236,8 @@
     .badge-ptp      { background: #edfaf2; color: #1c7a3b; }
     .badge-noanswer { background: #fff0f0; color: #c0392b; }
     .badge-scheduled{ background: #eaf4fb; color: #1a6fa8; }
-    .badge-error    { background: #fff0f0; color: #c0392b; }
+    .badge-error        { background: #fff0f0; color: #c0392b; }
+    .badge-error-retry  { background: #fff8ee; color: #a05c00; animation: flash 1.4s ease-in-out infinite; }
 
     @keyframes flash {
       0%, 100% { opacity: 1; }
@@ -757,12 +758,13 @@
 
     function badge(status, note) {
       const map = {
-        pending:   ['badge-pending',  '⏳ Pendiente'],
-        calling:   ['badge-calling',  '📞 Llamando'],
-        ptp:       ['badge-ptp',      '✅ Prometió pagar'],
-        noanswer:  ['badge-noanswer', '❌ No atendió'],
-        scheduled: ['badge-scheduled','📅 Agendó'],
-        error:     ['badge-error',    '⚠️ Error'],
+        pending:      ['badge-pending',      '⏳ Pendiente'],
+        calling:      ['badge-calling',      '📞 Llamando'],
+        ptp:          ['badge-ptp',          '✅ Prometió pagar'],
+        noanswer:     ['badge-noanswer',     '❌ No atendió'],
+        scheduled:    ['badge-scheduled',    '📅 Agendó'],
+        error:        ['badge-error',        '❌ Error técnico'],
+        'error-retry':['badge-error-retry',  '❌ Error técnico — reintentando'],
       };
       const [cls, label] = map[status] || map.pending;
       return `<span class="badge ${cls}">${label}${note ? ' · ' + esc(note) : ''}</span>`;
@@ -817,11 +819,15 @@
           if (res.ok) {
             setStatus(debtor, 'calling');
           } else {
-            setStatus(debtor, 'error', data.error || `HTTP ${res.status}`);
+            const msg  = data.error || `HTTP ${res.status}`;
+            // 502 = Twilio infra error → transient, will retry server-side
+            const kind = res.status === 502 ? 'error-retry' : 'error';
+            setStatus(debtor, kind, msg);
             errors++;
           }
         } catch (err) {
-          setStatus(debtor, 'error', err.message);
+          // Network-level failure → transient
+          setStatus(debtor, 'error-retry', err.message);
           errors++;
         }
 

@@ -71,6 +71,27 @@ router.post('/outbound', async (req, res) => {
     return res.status(400).json({ error: 'El número debe estar en formato E.164 (ej: +5491112345678)' });
   }
 
+  if (debtor.name !== undefined) {
+    const name = String(debtor.name).trim();
+    if (name.length < 2 || name.length > 100) {
+      return res.status(400).json({ error: 'El nombre debe tener entre 2 y 100 caracteres' });
+    }
+  }
+
+  if (debtor.amount !== undefined) {
+    const amount = Number(debtor.amount);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ error: 'El monto debe ser un número positivo' });
+    }
+  }
+
+  if (debtor.daysOverdue !== undefined) {
+    const days = Number(debtor.daysOverdue);
+    if (!Number.isInteger(days) || days < 0) {
+      return res.status(400).json({ error: 'daysOverdue debe ser un entero positivo' });
+    }
+  }
+
   try {
     const client = getTwilioClient();
 

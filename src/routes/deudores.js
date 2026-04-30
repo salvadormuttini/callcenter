@@ -39,6 +39,18 @@ router.get('/:debtorName', async (req, res) => {
       return res.status(400).json({ error: `Teléfono "${phone}" no está en formato E.164 (+549...)` });
     }
 
+    if (!name || name.length < 2 || name.length > 100) {
+      return res.status(400).json({ error: 'El nombre debe tener entre 2 y 100 caracteres' });
+    }
+
+    if (isNaN(amount) || amount < 0) {
+      return res.status(400).json({ error: 'El monto debe ser un número positivo' });
+    }
+
+    if (!Number.isInteger(daysOverdue) || daysOverdue < 0) {
+      return res.status(400).json({ error: 'daysOverdue debe ser un entero positivo' });
+    }
+
     // 4. Initiate Twilio call
     const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 

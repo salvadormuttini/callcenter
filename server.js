@@ -9,6 +9,7 @@ const path    = require('path');
 const fs      = require('fs');
 
 const cookieParser = require('cookie-parser');
+const rateLimit    = require('express-rate-limit');
 
 const { handleMediaStream } = require('./src/routes/media-stream');
 const { startProcessor }   = require('./src/services/retryQueue');
@@ -39,6 +40,31 @@ if (missing.length) {
   process.exit(1);
 }
 
+// ─── Rate limiters ────────────────────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes, intentá de nuevo en 15 minutos' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de login, esperá 15 minutos' },
+});
+
+const queueLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Límite de campañas alcanzado, intentá en 1 hora' },
+});
+
 // ─── Middlewares ──────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -53,7 +79,7 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'src/public/login.html'));
 });
 
-app.post('/auth/login', (req, res) => {
+app.post('/auth/login', authLimiter, (req, res) => {
   const { password } = req.body;
   const expected = process.env.PANEL_PASSWORD;
 
@@ -175,10 +201,11 @@ app.get('/api/test/deepgram', async (req, res) => {
   }
 });
 
+app.use('/api/', apiLimiter);
 app.use('/api/calls', callsRoutes);
 
 // ─── Call queue endpoints (protected) ────────────────────────────────────────
-app.post('/api/queue/batch', requireAuth, async (req, res) => {
+app.post('/api/queue/batch', requireAuth, queueLimiter, async (req, res) => {
   const { debtors } = req.body;
   if (!Array.isArray(debtors) || debtors.length === 0)
     return res.status(400).json({ error: 'Se requiere un array "debtors" no vacío' });

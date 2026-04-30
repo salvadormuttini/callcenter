@@ -8,93 +8,126 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0f0f0f;
-      --surface:   #1a1a1a;
-      --border:    #2a2a2a;
-      --blue:      #3b82f6;
-      --blue-dim:  #1d4ed8;
-      --text:      #f5f5f5;
-      --muted:     #737373;
-      --green:     #22c55e;
-      --yellow:    #eab308;
-      --red:       #ef4444;
-      --cyan:      #38bdf8;
+      --bg:        #f5f5f7;
+      --card:      #ffffff;
+      --blue:      #0071e3;
+      --blue-hover:#0077ed;
+      --text:      #1d1d1f;
+      --sub:       #6e6e73;
+      --muted:     #a1a1a6;
+      --border:    #d2d2d7;
+      --green:     #34c759;
+      --red:       #ff3b30;
+      --yellow:    #ff9f0a;
+      --cyan:      #32ade6;
+      --shadow:    0 2px 20px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+      --radius:    18px;
+      --radius-sm: 12px;
+      --radius-pill: 980px;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 48px 16px 80px;
-      gap: 40px;
+      padding: 64px 20px 100px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── FADE IN ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .main {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      animation: fadeUp 0.45s ease both;
     }
 
     /* ── HEADER ── */
     header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
+      text-align: center;
+      margin-bottom: 8px;
     }
 
     .logo {
-      font-size: 3rem;
-      font-weight: 800;
-      letter-spacing: -2px;
+      font-size: 52px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
       color: var(--text);
+      line-height: 1;
+      margin-bottom: 10px;
     }
 
     .status-pill {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 7px;
-      font-size: 0.78rem;
-      color: var(--muted);
-      letter-spacing: 0.4px;
+      font-size: 15px;
+      color: var(--sub);
+      letter-spacing: 0;
     }
 
     .dot {
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: var(--green);
-      box-shadow: 0 0 6px var(--green);
-      animation: pulse 2.5s ease-in-out infinite;
+      box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.25);
+      animation: pulse 2.8s ease-in-out infinite;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.4; }
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.25); }
+      50%       { opacity: 0.6; box-shadow: 0 0 0 4px rgba(52, 199, 89, 0.1); }
     }
 
-    /* ── MAIN COLUMN ── */
-    .main {
-      width: 100%;
-      max-width: 760px;
-      display: flex;
-      flex-direction: column;
-      gap: 28px;
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
+
+    /* ── UPLOAD FEEDBACK ── */
+    .upload-feedback {
+      display: none;
+      background: #f0faf3;
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 15px;
+      color: #1c7a3b;
+      font-weight: 500;
+    }
+
+    .upload-feedback.visible { display: block; }
 
     /* ── DROPZONE ── */
     .dropzone {
       border: 2px dashed var(--border);
-      border-radius: 16px;
-      padding: 56px 32px;
+      border-radius: var(--radius);
+      padding: 60px 32px;
       text-align: center;
       cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      background: var(--surface);
+      transition: border-color 200ms ease, background 200ms ease;
+      background: var(--card);
       position: relative;
     }
 
     .dropzone:hover, .dropzone.over {
       border-color: var(--blue);
-      background: #1a1a2e;
+      background: #f0f7ff;
     }
 
     .dropzone input[type="file"] {
@@ -107,34 +140,35 @@
     }
 
     .drop-icon {
-      font-size: 2.8rem;
-      margin-bottom: 14px;
+      font-size: 40px;
+      margin-bottom: 16px;
       display: block;
       pointer-events: none;
     }
 
     .drop-title {
-      font-size: 1.25rem;
-      font-weight: 700;
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
       margin-bottom: 8px;
       pointer-events: none;
+      letter-spacing: -0.2px;
     }
 
     .drop-sub {
-      font-size: 0.85rem;
-      color: var(--muted);
+      font-size: 14px;
+      color: var(--sub);
       pointer-events: none;
+      line-height: 1.5;
     }
 
-    .drop-sub span {
-      color: var(--blue);
-    }
+    .drop-sub .accent { color: var(--blue); font-weight: 500; }
 
     .file-name {
-      margin-top: 14px;
-      font-size: 0.85rem;
-      color: var(--green);
-      font-weight: 600;
+      margin-top: 16px;
+      font-size: 14px;
+      color: #1c7a3b;
+      font-weight: 500;
       pointer-events: none;
     }
 
@@ -142,8 +176,9 @@
     .table-wrap {
       display: none;
       overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      background: var(--card);
     }
 
     .table-wrap.visible { display: block; }
@@ -151,102 +186,123 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.9rem;
+      font-size: 14px;
     }
 
     thead th {
-      background: #111;
-      padding: 12px 16px;
+      background: #fafafa;
+      padding: 12px 20px;
       text-align: left;
-      font-size: 0.72rem;
+      font-size: 11px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.6px;
       color: var(--muted);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #f0f0f0;
       white-space: nowrap;
     }
 
     tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
+      border-bottom: 1px solid #f5f5f7;
+      transition: background 150ms ease;
     }
 
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: #1f1f1f; }
+    tbody tr:hover { background: #fafafa; }
 
     tbody td {
-      padding: 12px 16px;
+      padding: 14px 20px;
       vertical-align: middle;
     }
 
-    .td-name  { font-weight: 600; }
-    .td-phone { color: var(--muted); font-size: 0.84rem; }
-    .td-monto { font-variant-numeric: tabular-nums; }
+    .td-name  { font-weight: 500; color: var(--text); }
+    .td-phone { color: var(--sub); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .td-monto { font-variant-numeric: tabular-nums; font-weight: 500; }
 
     /* ── BADGES ── */
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 600;
+      padding: 4px 11px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 500;
       white-space: nowrap;
     }
 
-    .badge-pending  { background: #222; color: var(--muted); }
-    .badge-calling  { background: #2d2600; color: var(--yellow); animation: flash 1s ease-in-out infinite; }
-    .badge-ptp      { background: #052e16; color: var(--green); }
-    .badge-noanswer { background: #2d1010; color: var(--red); }
-    .badge-scheduled{ background: #0c1a2e; color: var(--cyan); }
-    .badge-error    { background: #2d1010; color: var(--red); }
+    .badge-pending  { background: #f5f5f7; color: var(--muted); }
+    .badge-calling  { background: #fff4e0; color: #a05c00; animation: flash 1.1s ease-in-out infinite; }
+    .badge-ptp      { background: #edfaf2; color: #1c7a3b; }
+    .badge-noanswer { background: #fff0f0; color: #c0392b; }
+    .badge-scheduled{ background: #eaf4fb; color: #1a6fa8; }
+    .badge-error    { background: #fff0f0; color: #c0392b; }
 
     @keyframes flash {
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.5; }
     }
 
-    /* ── CTA BUTTON ── */
+    /* ── SPINNER ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* ── CTA ── */
     .cta-wrap {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }
 
     .btn-main {
       width: 100%;
       max-width: 400px;
-      padding: 18px 32px;
+      padding: 16px 32px;
       background: var(--blue);
       color: #fff;
       border: none;
-      border-radius: 14px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.3px;
+      border-radius: var(--radius-pill);
+      font-size: 17px;
+      font-weight: 590;
+      font-family: inherit;
       cursor: pointer;
-      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      transition: all 200ms ease;
+      letter-spacing: -0.1px;
     }
 
-    .btn-main:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); }
-    .btn-main:active:not(:disabled){ transform: translateY(0); }
-    .btn-main:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .btn-main:hover:not(:disabled) {
+      background: var(--blue-hover);
+      transform: scale(1.01);
+      box-shadow: 0 4px 24px rgba(0,113,227,0.3);
+    }
 
-    .progress-text {
-      font-size: 0.85rem;
-      color: var(--muted);
-      text-align: center;
-      min-height: 20px;
+    .btn-main:active:not(:disabled) { transform: scale(0.99); }
+
+    .btn-main:disabled {
+      background: #c7c7cc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
     .progress-bar-wrap {
       width: 100%;
       max-width: 400px;
-      height: 4px;
-      background: var(--border);
-      border-radius: 4px;
+      height: 3px;
+      background: #e5e5ea;
+      border-radius: 99px;
       overflow: hidden;
       display: none;
     }
@@ -256,149 +312,139 @@
     .progress-bar {
       height: 100%;
       background: var(--blue);
-      border-radius: 4px;
+      border-radius: 99px;
       transition: width 0.4s ease;
       width: 0%;
     }
 
-    /* ── UPLOAD FEEDBACK ── */
-    .upload-feedback {
-      display: none;
-      background: #052e16;
-      border: 1px solid #166534;
-      border-radius: 10px;
-      padding: 14px 18px;
-      font-size: 0.9rem;
-      color: var(--green);
-      font-weight: 600;
-    }
-
-    .upload-feedback.visible { display: block; }
-
-    /* ── SPINNER ── */
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
+    .progress-text {
+      font-size: 13px;
+      color: var(--sub);
+      text-align: center;
+      min-height: 18px;
     }
 
     /* ── SUMMARY ── */
     .summary {
       display: none;
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      font-size: 0.9rem;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
     }
 
     .summary.visible { display: block; }
 
     .summary-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--green);
-      margin-bottom: 16px;
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.2px;
+      margin-bottom: 20px;
     }
 
     .summary-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 18px;
+      gap: 12px;
+      margin-bottom: 20px;
     }
 
     .summary-stat {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
     }
 
     .summary-stat .label {
-      font-size: 0.72rem;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--muted);
-      margin-bottom: 4px;
+      font-weight: 600;
+      margin-bottom: 6px;
     }
 
     .summary-stat .value {
-      font-size: 1.4rem;
-      font-weight: 800;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -1px;
       line-height: 1;
     }
 
-    .value-total   { color: var(--text); }
-    .value-ptp     { color: var(--green); }
-    .value-noanswer{ color: var(--red); }
-    .value-error   { color: var(--yellow); }
+    .value-total    { color: var(--text); }
+    .value-ok       { color: #1c7a3b; }
+    .value-ptp      { color: #1c7a3b; }
+    .value-error    { color: #c0392b; }
+
+    .retry-note {
+      font-size: 13px;
+      color: #a05c00;
+      background: #fff8ee;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+    }
 
     .sheets-link {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.85rem;
+      font-size: 15px;
       color: var(--blue);
       text-decoration: none;
-      border: 1px solid var(--blue);
-      border-radius: 8px;
-      padding: 8px 14px;
-      transition: background 0.15s;
+      font-weight: 500;
+      transition: color 150ms ease;
     }
 
-    .sheets-link:hover { background: rgba(59,130,246,0.1); }
+    .sheets-link:hover { color: var(--blue-hover); text-decoration: underline; }
 
-    /* ── INDIVIDUAL LINK ── */
+    /* ── SOLO LINK ── */
     .solo-link {
-      font-size: 0.8rem;
-      color: var(--muted);
+      font-size: 15px;
+      color: var(--blue);
       cursor: pointer;
       background: none;
       border: none;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      transition: color 0.15s;
+      font-family: inherit;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 150ms ease;
     }
 
-    .solo-link:hover { color: var(--blue); }
+    .solo-link:hover { color: var(--blue-hover); text-decoration: underline; }
 
     /* ── MODAL ── */
     .modal-backdrop {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.75);
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       z-index: 100;
       align-items: center;
       justify-content: center;
-      padding: 16px;
+      padding: 20px;
     }
 
     .modal-backdrop.open { display: flex; }
 
     .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 36px;
       width: 100%;
       max-width: 420px;
+      animation: fadeUp 0.3s ease both;
     }
 
     .modal h2 {
-      font-size: 1.1rem;
+      font-size: 21px;
       font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
       margin-bottom: 24px;
     }
 
@@ -406,30 +452,31 @@
 
     label {
       display: block;
-      font-size: 0.75rem;
+      font-size: 12px;
       font-weight: 600;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 6px;
+      margin-bottom: 7px;
     }
 
     input[type="text"],
     input[type="tel"],
     input[type="number"] {
       width: 100%;
-      padding: 11px 14px;
+      padding: 12px 14px;
       background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      border: none;
+      border-radius: 10px;
       color: var(--text);
-      font-size: 0.95rem;
+      font-size: 16px;
+      font-family: inherit;
       outline: none;
-      transition: border-color 0.15s;
+      transition: box-shadow 150ms ease;
     }
 
-    input:focus { border-color: var(--blue); }
-    input::placeholder { color: #444; }
+    input:focus { box-shadow: 0 0 0 3px rgba(0,113,227,0.25); }
+    input::placeholder { color: #c7c7cc; }
 
     .modal-actions {
       display: flex;
@@ -439,75 +486,82 @@
 
     .btn-cancel {
       flex: 1;
-      padding: 12px;
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--muted);
-      font-size: 0.9rem;
+      padding: 13px;
+      background: var(--bg);
+      border: none;
+      border-radius: var(--radius-pill);
+      color: var(--sub);
+      font-size: 15px;
+      font-family: inherit;
+      font-weight: 500;
       cursor: pointer;
-      transition: border-color 0.15s;
+      transition: background 150ms ease;
     }
 
-    .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+    .btn-cancel:hover { background: #e8e8ed; }
 
     .btn-call {
       flex: 2;
-      padding: 12px;
+      padding: 13px;
       background: var(--blue);
       border: none;
-      border-radius: 10px;
+      border-radius: var(--radius-pill);
       color: #fff;
-      font-size: 0.95rem;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 590;
+      font-family: inherit;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: all 200ms ease;
     }
 
-    .btn-call:hover { background: #2563eb; }
+    .btn-call:hover:not(:disabled) { background: var(--blue-hover); }
     .btn-call:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .modal-status {
       margin-top: 14px;
-      font-size: 0.85rem;
+      font-size: 14px;
       min-height: 20px;
       text-align: center;
     }
 
-    .modal-status.ok  { color: var(--green); }
-    .modal-status.err { color: var(--red); }
+    .modal-status.ok  { color: #1c7a3b; }
+    .modal-status.err { color: #c0392b; }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 480px) {
-      .logo { font-size: 2.2rem; }
-      .dropzone { padding: 40px 20px; }
-      .btn-main { font-size: 1rem; padding: 16px; }
+      body { padding: 40px 16px 80px; }
+      .logo { font-size: 40px; }
+      .dropzone { padding: 44px 24px; }
+      .btn-main { font-size: 16px; }
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .modal { padding: 28px 24px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header>
-    <div class="logo">COLE</div>
-    <div class="status-pill"><span class="dot"></span> Sistema activo</div>
-  </header>
-
-  <!-- MAIN -->
   <div class="main">
+
+    <!-- HEADER -->
+    <header>
+      <div class="logo">Cole</div>
+      <div class="status-pill"><span class="dot"></span> Sistema activo</div>
+    </header>
+
+    <!-- UPLOAD FEEDBACK -->
+    <div class="upload-feedback" id="uploadFeedback"></div>
 
     <!-- DROPZONE -->
     <div class="dropzone" id="dropzone">
       <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
       <span class="drop-icon">📂</span>
       <div class="drop-title">Arrastrá tu cartera acá</div>
-      <div class="drop-sub">o hacé click para seleccionar (<span>.csv</span> o <span>.xlsx</span>)</div>
-      <div class="drop-sub" style="margin-top:10px">Columnas: <span>nombre · telefono · monto · dias_mora</span></div>
+      <div class="drop-sub">o hacé clic para seleccionar<br>
+        <span class="accent">.csv</span> o <span class="accent">.xlsx</span> —
+        columnas: <span class="accent">nombre · teléfono · monto · dias_mora</span>
+      </div>
       <div class="file-name" id="fileName"></div>
     </div>
-
-    <!-- UPLOAD FEEDBACK -->
-    <div class="upload-feedback" id="uploadFeedback"></div>
 
     <!-- TABLE -->
     <div class="table-wrap" id="tableWrap">
@@ -529,7 +583,7 @@
 
     <!-- CTA -->
     <div class="cta-wrap">
-      <button class="btn-main" id="btnCampaign" disabled>INICIAR CAMPAÑA</button>
+      <button class="btn-main" id="btnCampaign" disabled>Iniciar Campaña</button>
       <div class="progress-bar-wrap" id="progressWrap">
         <div class="progress-bar" id="progressBar"></div>
       </div>
@@ -561,7 +615,7 @@
       </div>
       <div class="modal-actions">
         <button class="btn-cancel" id="btnModalClose">Cancelar</button>
-        <button class="btn-call" id="btnModalCall">📞 Llamar</button>
+        <button class="btn-call" id="btnModalCall">Llamar</button>
       </div>
       <div class="modal-status" id="modalStatus"></div>
     </div>
@@ -571,30 +625,27 @@
   (() => {
     'use strict';
 
-    // ── State ──
-    let debtors = [];      // { name, phone, amount, daysOverdue, status, rowEl }
-    let running = false;
-
-    // ── Config ──
     const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/15kL4w4-Qj2j0ZeApuoroe_aHk9NsBrQIL1JYYLIiRTc';
 
-    // ── Elements ──
-    const dropzone        = document.getElementById('dropzone');
-    const fileInput       = document.getElementById('fileInput');
-    const fileName        = document.getElementById('fileName');
-    const uploadFeedback  = document.getElementById('uploadFeedback');
-    const tableWrap       = document.getElementById('tableWrap');
-    const tableBody       = document.getElementById('tableBody');
-    const btnCampaign     = document.getElementById('btnCampaign');
-    const progressWrap    = document.getElementById('progressWrap');
-    const progressBar     = document.getElementById('progressBar');
-    const progressText    = document.getElementById('progressText');
-    const summaryEl       = document.getElementById('summary');
-    const soloLink        = document.getElementById('soloLink');
-    const modalBackdrop   = document.getElementById('modalBackdrop');
-    const btnModalClose   = document.getElementById('btnModalClose');
-    const btnModalCall    = document.getElementById('btnModalCall');
-    const modalStatus     = document.getElementById('modalStatus');
+    const dropzone       = document.getElementById('dropzone');
+    const fileInput      = document.getElementById('fileInput');
+    const fileName       = document.getElementById('fileName');
+    const uploadFeedback = document.getElementById('uploadFeedback');
+    const tableWrap      = document.getElementById('tableWrap');
+    const tableBody      = document.getElementById('tableBody');
+    const btnCampaign    = document.getElementById('btnCampaign');
+    const progressWrap   = document.getElementById('progressWrap');
+    const progressBar    = document.getElementById('progressBar');
+    const progressText   = document.getElementById('progressText');
+    const summaryEl      = document.getElementById('summary');
+    const soloLink       = document.getElementById('soloLink');
+    const modalBackdrop  = document.getElementById('modalBackdrop');
+    const btnModalClose  = document.getElementById('btnModalClose');
+    const btnModalCall   = document.getElementById('btnModalCall');
+    const modalStatus    = document.getElementById('modalStatus');
+
+    let debtors = [];
+    let running = false;
 
     // ── Drag & drop ──
     dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
@@ -605,11 +656,8 @@
       const f = e.dataTransfer.files[0];
       if (f) handleFile(f);
     });
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files[0]) handleFile(fileInput.files[0]);
-    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
-    // ── File handling ──
     function handleFile(file) {
       fileName.textContent = '📄 ' + file.name;
       const ext = file.name.split('.').pop().toLowerCase();
@@ -618,9 +666,9 @@
         reader.onload = e => parseCSV(e.target.result);
         reader.readAsText(file, 'UTF-8');
       } else if (ext === 'xlsx' || ext === 'xls') {
-        fileName.textContent += ' — (Excel no soportado directamente, convertí a .csv primero)';
+        fileName.textContent += ' — convertí a .csv para continuar';
       } else {
-        fileName.textContent = '❌ Formato no soportado';
+        fileName.textContent = 'Formato no soportado';
       }
     }
 
@@ -628,7 +676,7 @@
       const lines = text.trim().split(/\r?\n/);
       if (lines.length < 2) return;
 
-      const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+      const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
       const idx = {
         nombre:    headers.findIndex(h => h.includes('nombre')),
         telefono:  headers.findIndex(h => h.includes('tel') || h.includes('phone')),
@@ -640,31 +688,31 @@
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(/[,;]/).map(c => c.trim().replace(/^"|"$/g, ''));
         if (cols.length < 2) continue;
-        const name  = idx.nombre   >= 0 ? cols[idx.nombre]   : '';
-        const phone = idx.telefono >= 0 ? cols[idx.telefono] : '';
-        const amount = idx.monto   >= 0 ? Number(cols[idx.monto].replace(/[^0-9.]/g,'')) || 0 : 0;
-        const days   = idx.dias_mora >= 0 ? Number(cols[idx.dias_mora]) || 0 : 0;
+        const name     = idx.nombre    >= 0 ? cols[idx.nombre]   : '';
+        const phone    = idx.telefono  >= 0 ? cols[idx.telefono] : '';
+        const amount   = idx.monto     >= 0 ? Number(cols[idx.monto].replace(/[^0-9.]/g, '')) || 0 : 0;
+        const days     = idx.dias_mora >= 0 ? Number(cols[idx.dias_mora]) || 0 : 0;
         if (!name && !phone) continue;
         debtors.push({ name, phone, amount, daysOverdue: days, status: 'pending' });
       }
 
-      renderTable();
+      renderTable(true);
       showUploadFeedback();
       updateCTA();
     }
 
     function showUploadFeedback() {
-      const count = debtors.length;
-      uploadFeedback.textContent = `✅ Archivo cargado: ${count} deudor${count !== 1 ? 'es' : ''} listo${count !== 1 ? 's' : ''} para llamar`;
+      const n = debtors.length;
+      uploadFeedback.textContent = `✅ Archivo cargado: ${n} deudor${n !== 1 ? 'es' : ''} listo${n !== 1 ? 's' : ''} para llamar`;
       uploadFeedback.classList.add('visible');
     }
 
     // ── Table ──
-    function renderTable(previewOnly = true) {
+    function renderTable(previewOnly = false) {
       tableBody.innerHTML = '';
-      const preview = previewOnly ? debtors.slice(0, 3) : debtors;
+      const list = previewOnly ? debtors.slice(0, 3) : debtors;
 
-      preview.forEach(d => {
+      list.forEach(d => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="td-name">${esc(d.name)}</td>
@@ -678,9 +726,7 @@
 
       if (previewOnly && debtors.length > 3) {
         const tr = document.createElement('tr');
-        tr.id = 'moreRow';
-        tr.innerHTML = `<td colspan="4" style="text-align:center;color:var(--muted);font-size:0.83rem;padding:10px">
-          … y ${debtors.length - 3} deudores más</td>`;
+        tr.innerHTML = `<td colspan="4" style="text-align:center;color:var(--muted);font-size:13px;padding:12px">… y ${debtors.length - 3} deudores más</td>`;
         tableBody.appendChild(tr);
       }
 
@@ -689,7 +735,6 @@
     }
 
     function expandTable() {
-      // Re-render all rows, preserving existing rowEl references
       tableBody.innerHTML = '';
       debtors.forEach(d => {
         const tr = document.createElement('tr');
@@ -724,15 +769,14 @@
     }
 
     function esc(s) {
-      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // ── CTA state ──
     function updateCTA() {
       if (running) return;
-      const count = debtors.length;
-      btnCampaign.disabled = count === 0;
-      btnCampaign.textContent = count > 0 ? `INICIAR CAMPAÑA — Llamar a ${count} deudores` : 'INICIAR CAMPAÑA';
+      const n = debtors.length;
+      btnCampaign.disabled = n === 0;
+      btnCampaign.textContent = n > 0 ? `Iniciar Campaña — ${n} deudores` : 'Iniciar Campaña';
       progressText.textContent = '';
     }
 
@@ -745,12 +789,12 @@
       progressWrap.classList.add('visible');
       expandTable();
 
-      let done = 0, ptpCount = 0, noAnswerCount = 0, errors = 0;
+      let done = 0, ptpCount = 0, errors = 0;
       const total = debtors.length;
 
-      function setBtn(n) {
-        btnCampaign.innerHTML = `<span class="spinner"></span>Llamando ${n} de ${total}…`;
-      }
+      const setBtn = n => {
+        btnCampaign.innerHTML = `<span class="spinner"></span>Llamando ${n} de ${total}`;
+      };
 
       setBtn(0);
 
@@ -766,21 +810,14 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               to: debtor.phone,
-              debtor: {
-                name:        debtor.name,
-                amount:      debtor.amount,
-                daysOverdue: debtor.daysOverdue,
-              },
+              debtor: { name: debtor.name, amount: debtor.amount, daysOverdue: debtor.daysOverdue },
             }),
           });
-
           const data = await res.json();
-
           if (res.ok) {
             setStatus(debtor, 'calling');
           } else {
-            const msg = data.error || `HTTP ${res.status}`;
-            setStatus(debtor, 'error', msg);
+            setStatus(debtor, 'error', data.error || `HTTP ${res.status}`);
             errors++;
           }
         } catch (err) {
@@ -792,13 +829,9 @@
         if (done < total) await delay(5000);
       }
 
-      // Final
       progressBar.style.width = '100%';
       btnCampaign.textContent = '✅ Campaña completada';
 
-      const initiated = done - errors;
-
-      // Fetch pending retries from server
       let pendingRetries = 0;
       try {
         const rr = await fetch('/api/retries');
@@ -806,16 +839,17 @@
         pendingRetries = rd.pending || 0;
       } catch (_) {}
 
+      const initiated = done - errors;
       summaryEl.innerHTML = `
-        <div class="summary-title">📊 Resultados</div>
+        <div class="summary-title">Resultados</div>
         <div class="summary-grid">
           <div class="summary-stat">
-            <div class="label">Total llamadas</div>
+            <div class="label">Total</div>
             <div class="value value-total">${total}</div>
           </div>
           <div class="summary-stat">
             <div class="label">Iniciadas</div>
-            <div class="value value-ptp">${initiated}</div>
+            <div class="value value-ok">${initiated}</div>
           </div>
           <div class="summary-stat">
             <div class="label">Prometieron pagar</div>
@@ -826,10 +860,8 @@
             <div class="value value-error">${errors}</div>
           </div>
         </div>
-        ${pendingRetries > 0 ? `<div style="margin-bottom:14px;font-size:0.88rem;color:var(--yellow)">🔄 Reintentos programados: ${pendingRetries} (en 2 hs)</div>` : ''}
-        <a class="sheets-link" href="${SHEETS_URL}" target="_blank" rel="noopener">
-          📄 Ver detalle completo →
-        </a>
+        ${pendingRetries > 0 ? `<div class="retry-note">🔄 Reintentos programados: ${pendingRetries} — en 2 horas</div>` : ''}
+        <a class="sheets-link" href="${SHEETS_URL}" target="_blank" rel="noopener">Ver detalle completo →</a>
       `;
       summaryEl.classList.add('visible');
       summaryEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -837,11 +869,9 @@
       running = false;
     });
 
-    function delay(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // ── Modal: llamada individual ──
+    // ── Modal ──
     soloLink.addEventListener('click', () => modalBackdrop.classList.add('open'));
     btnModalClose.addEventListener('click', closeModal);
     modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeModal(); });
@@ -873,25 +903,21 @@
         const res = await fetch('/api/calls/outbound', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: phone,
-            debtor: { name, amount, daysOverdue: days },
-          }),
+          body: JSON.stringify({ to: phone, debtor: { name, amount, daysOverdue: days } }),
         });
         const data = await res.json();
-
         if (res.ok) {
           modalStatus.className = 'modal-status ok';
-          modalStatus.textContent = `✅ Llamada iniciada · ${data.callSid || ''}`;
+          modalStatus.textContent = `Llamada iniciada · ${data.callSid || ''}`;
         } else {
           throw new Error(data.error || `HTTP ${res.status}`);
         }
       } catch (err) {
         modalStatus.className = 'modal-status err';
-        modalStatus.textContent = `❌ ${err.message}`;
+        modalStatus.textContent = err.message;
       } finally {
         btnModalCall.disabled = false;
-        btnModalCall.textContent = '📞 Llamar';
+        btnModalCall.textContent = 'Llamar';
       }
     });
 

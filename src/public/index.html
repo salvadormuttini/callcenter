@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cole — Panel de Control</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #58a6ff;
+    }
+
+    header p {
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: #8b949e;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #8b949e;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 1rem;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #58a6ff;
+    }
+
+    input::placeholder {
+      color: #484f58;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 8px;
+      background: #1f6feb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    button:hover:not(:disabled) { background: #388bfd; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .status.success {
+      display: block;
+      background: #0d2818;
+      border: 1px solid #238636;
+      color: #3fb950;
+    }
+
+    .status.error {
+      display: block;
+      background: #2d1117;
+      border: 1px solid #da3633;
+      color: #f85149;
+    }
+
+    .status .sid {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #8b949e;
+      word-break: break-all;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 0.75rem;
+      color: #484f58;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Cole</h1>
+    <p>Panel de Control — BML Collection Services</p>
+  </header>
+
+  <div class="card">
+    <form id="callForm">
+      <div class="field">
+        <label for="name">Nombre completo</label>
+        <input id="name" name="name" type="text" placeholder="Juan García" required />
+      </div>
+
+      <div class="field">
+        <label for="phone">Teléfono</label>
+        <input id="phone" name="phone" type="tel" placeholder="+5491112345678" required />
+      </div>
+
+      <div class="field">
+        <label for="amount">Monto adeudado (pesos)</label>
+        <input id="amount" name="amount" type="number" min="1" placeholder="50000" required />
+      </div>
+
+      <div class="field">
+        <label for="daysOverdue">Días de mora</label>
+        <input id="daysOverdue" name="daysOverdue" type="number" min="1" placeholder="30" required />
+      </div>
+
+      <button type="submit" id="btn">LLAMAR AHORA</button>
+    </form>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <footer>Cole v1.0 · Be Eme Ele Collection Services</footer>
+
+  <script>
+    const form   = document.getElementById('callForm');
+    const btn    = document.getElementById('btn');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Iniciando llamada…';
+      status.className = 'status';
+      status.innerHTML = '';
+
+      const body = {
+        name:        document.getElementById('name').value.trim(),
+        phone:       document.getElementById('phone').value.trim(),
+        amount:      Number(document.getElementById('amount').value),
+        daysOverdue: Number(document.getElementById('daysOverdue').value),
+      };
+
+      try {
+        const res  = await fetch('/api/calls/outbound', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          status.className = 'status success';
+          status.innerHTML = `✅ Llamada iniciada<div class="sid">CallSid: ${data.callSid || data.sid || '—'}</div>`;
+          form.reset();
+        } else {
+          throw new Error(data.error || data.message || `HTTP ${res.status}`);
+        }
+      } catch (err) {
+        status.className = 'status error';
+        status.textContent = `❌ Error: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'LLAMAR AHORA';
+      }
+    });
+  </script>
+
+</body>
+</html>

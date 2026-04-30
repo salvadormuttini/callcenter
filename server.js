@@ -16,6 +16,7 @@ const { log, readLastLines } = require('./src/services/logger');
 const { Resend }             = require('resend');
 const callQueue              = require('./src/services/callQueue');
 const { requireAuth, createSession, destroySession, SESSION_COOKIE, SESSION_TTL_MS } = require('./src/middleware/auth');
+const { resumeFromSheets }   = callQueue;
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -177,12 +178,12 @@ app.get('/api/test/deepgram', async (req, res) => {
 app.use('/api/calls', callsRoutes);
 
 // ─── Call queue endpoints (protected) ────────────────────────────────────────
-app.post('/api/queue/batch', requireAuth, (req, res) => {
+app.post('/api/queue/batch', requireAuth, async (req, res) => {
   const { debtors } = req.body;
   if (!Array.isArray(debtors) || debtors.length === 0)
     return res.status(400).json({ error: 'Se requiere un array "debtors" no vacío' });
 
-  callQueue.resetQueue();
+  await callQueue.resetQueueAndSheets();
   const ids = callQueue.addBatch(debtors);
   callQueue.startProcessing();
   log.info('Queue', `Campaña iniciada — ${debtors.length} deudores encolados`);
@@ -301,6 +302,9 @@ async function runHealthCheck() {
 
 startProcessor();
 setInterval(runHealthCheck, HEALTH_INTERVAL);
+
+// Resume any pending queue items from before the last restart
+resumeFromSheets().catch(err => log.warn('Queue', 'resumeFromSheets error en startup', { error: err.message }));
 
 server.listen(PORT, () => {
   console.log(`\n🤖 Cole Call Center — Media Streams`);

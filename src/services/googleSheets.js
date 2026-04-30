@@ -69,4 +69,130 @@ async function getSheetRows(spreadsheetId, range) {
   return response.data.values || [];
 }
 
-module.exports = { appendCallReport, getSheetRows };
+// ─── Queue persistence ────────────────────────────────────────────────────────
+
+const QUEUE_TAB     = 'Queue';
+const QUEUE_HEADERS = ['id','name','phone','amount','daysOverdue','status','callSid','error','createdAt','updatedAt'];
+
+async function ensureQueueTab(sheets, spreadsheetId) {
+  const meta   = await sheets.spreadsheets.get({ spreadsheetId });
+  const exists = meta.data.sheets.some(s => s.properties.title === QUEUE_TAB);
+  if (exists) return;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: { requests: [{ addSheet: { properties: { title: QUEUE_TAB } } }] },
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range:            `${QUEUE_TAB}!A1:J1`,
+    valueInputOption: 'RAW',
+    requestBody:      { values: [QUEUE_HEADERS] },
+  });
+}
+
+// Appends a new queue item row. Returns the 1-based sheet row number.
+async function saveQueueItem(item) {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return null;
+
+  const sheets = buildSheetsClient();
+  await ensureQueueTab(sheets, spreadsheetId);
+
+  const now = new Date().toISOString();
+  const row = [
+    item.id,
+    item.debtorInfo?.name        || '',
+    item.phone                   || '',
+    item.debtorInfo?.amount      || '',
+    item.debtorInfo?.daysOverdue || '',
+    item.status,
+    item.callSid  || '',
+    item.error    || '',
+    now, now,
+  ];
+
+  const res = await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range:            `${QUEUE_TAB}!A:J`,
+    valueInputOption: 'RAW',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody:      { values: [row] },
+  });
+
+  const match = res.data?.updates?.updatedRange?.match(/!A(\d+)/);
+  return match ? parseInt(match[1]) : null;
+}
+
+// Updates status/callSid/error/updatedAt for a row we already know the number of.
+async function updateQueueRow(sheetRow, status, callSid, error) {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId || !sheetRow) return;
+
+  const sheets = buildSheetsClient();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range:            `${QUEUE_TAB}!F${sheetRow}:J${sheetRow}`,
+    valueInputOption: 'RAW',
+    requestBody:      { values: [[status, callSid || '', error || '', '', new Date().toISOString()]] },
+  });
+}
+
+// Returns all rows whose status is 'pending', with _sheetsRow set.
+async function loadPendingQueue() {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return [];
+
+  const sheets = buildSheetsClient();
+  await ensureQueueTab(sheets, spreadsheetId);
+
+  const res  = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${QUEUE_TAB}!A:J` });
+  const rows = res.data.values || [];
+  if (rows.length < 2) return [];
+
+  const pending = [];
+  for (let i = 1; i < rows.length; i++) {
+    const [id, name, phone, amount, daysOverdue, status, callSid, error, createdAt] = rows[i];
+    if (status !== 'pending') continue;
+    pending.push({
+      id,
+      phone,
+      debtorInfo: { name, phone, amount: Number(amount) || 0, daysOverdue: Number(daysOverdue) || 0 },
+      status:    'pending',
+      callSid:   callSid  || null,
+      error:     error    || null,
+      addedAt:   createdAt ? new Date(createdAt).getTime() : Date.now(),
+      _sheetsRow: i + 1, // 1-based (row 1 = headers)
+    });
+  }
+  return pending;
+}
+
+// Marks all pending rows as 'cancelled' (called before starting a new campaign).
+async function cancelAllPendingQueueItems() {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) return;
+
+  const sheets = buildSheetsClient();
+  const res    = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${QUEUE_TAB}!A:F` });
+  const rows   = res.data.values || [];
+  const now    = new Date().toISOString();
+
+  const updates = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i]?.[5] === 'pending') {
+      updates.push({
+        range:  `${QUEUE_TAB}!F${i + 1}:J${i + 1}`,
+        values: [['cancelled', '', 'Nueva campaña', '', now]],
+      });
+    }
+  }
+  if (updates.length === 0) return;
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: { valueInputOption: 'RAW', data: updates },
+  });
+}
+
+module.exports = { appendCallReport, getSheetRows, saveQueueItem, updateQueueRow, loadPendingQueue, cancelAllPendingQueueItems };

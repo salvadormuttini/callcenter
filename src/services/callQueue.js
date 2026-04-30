@@ -1,22 +1,44 @@
 'use strict';
 
-const { v4: uuidv4 } = require('uuid');
-const twilio        = require('twilio');
-const conversation  = require('./conversation');
-const { log }       = require('./logger');
+const { v4: uuidv4 }  = require('uuid');
+const twilio           = require('twilio');
+const conversation     = require('./conversation');
+const { log }          = require('./logger');
+const {
+  saveQueueItem,
+  updateQueueRow,
+  loadPendingQueue,
+  cancelAllPendingQueueItems,
+} = require('./googleSheets');
 
-const CALL_GAP_MS = 8000; // delay between calls
+const CALL_GAP_MS = 8000;
 
-// Item shape: { id, phone, debtorInfo, status, callSid, error, addedAt }
+// Item shape: { id, phone, debtorInfo, status, callSid, error, addedAt, _sheetsRow }
 const queue = [];
 
 let processing = false;
 let stopped    = false;
 
-// ── Public API ──────────────────────────────────────────────────────────────
+// ── Sheets helpers (fire-and-forget to never block the queue) ─────────────────
+
+function persistSave(item) {
+  saveQueueItem(item)
+    .then(row => { if (row) item._sheetsRow = row; })
+    .catch(e => log.warn('Queue', 'No se pudo guardar item en Sheets', { error: e.message }));
+}
+
+function persistUpdate(item) {
+  if (!item._sheetsRow) return;
+  updateQueueRow(item._sheetsRow, item.status, item.callSid, item.error)
+    .catch(e => log.warn('Queue', 'No se pudo actualizar item en Sheets', { error: e.message }));
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 function addToQueue(debtorInfo, phone, id = uuidv4()) {
-  queue.push({ id, phone, debtorInfo, status: 'pending', callSid: null, error: null, addedAt: Date.now() });
+  const item = { id, phone, debtorInfo, status: 'pending', callSid: null, error: null, addedAt: Date.now(), _sheetsRow: null };
+  queue.push(item);
+  persistSave(item);
   log.info('Queue', `Encolado ${debtorInfo.name || phone}`, { id, queueLen: queue.length });
   return id;
 }
@@ -27,11 +49,14 @@ function addBatch(debtors) {
 }
 
 function clearPending() {
-  const removed = queue.filter(i => i.status === 'pending').length;
-  queue.forEach(i => { if (i.status === 'pending') i.status = 'cancelled'; });
+  const cancelled = queue.filter(i => i.status === 'pending');
+  cancelled.forEach(i => {
+    i.status = 'cancelled';
+    persistUpdate(i);
+  });
   stopped = true;
-  log.info('Queue', `Cola detenida — ${removed} pendientes cancelados`);
-  return removed;
+  log.info('Queue', `Cola detenida — ${cancelled.length} pendientes cancelados`);
+  return cancelled.length;
 }
 
 function getQueueStatus() {
@@ -46,7 +71,34 @@ function resetQueue() {
   stopped      = false;
 }
 
-// ── Internal processor ──────────────────────────────────────────────────────
+// Async reset: clears memory AND marks pending Sheets rows as cancelled.
+async function resetQueueAndSheets() {
+  resetQueue();
+  try {
+    await cancelAllPendingQueueItems();
+  } catch (e) {
+    log.warn('Queue', 'No se pudo cancelar items previos en Sheets', { error: e.message });
+  }
+}
+
+// Load pending items from Sheets and resume processing (called on server startup).
+async function resumeFromSheets() {
+  let pending = [];
+  try {
+    pending = await loadPendingQueue();
+  } catch (e) {
+    log.warn('Queue', 'No se pudo cargar cola desde Sheets', { error: e.message });
+    return;
+  }
+
+  if (pending.length === 0) return;
+
+  log.info('Queue', `Retomando ${pending.length} llamadas pendientes del reinicio anterior`);
+  pending.forEach(item => queue.push(item));
+  startProcessing();
+}
+
+// ── Internal processor ────────────────────────────────────────────────────────
 
 async function processQueue() {
   if (processing) return;
@@ -60,6 +112,7 @@ async function processQueue() {
     if (!item) break;
 
     item.status = 'calling';
+    persistUpdate(item);
     log.call(item.phone, item.debtorInfo?.name, 'queue-call', { id: item.id });
 
     try {
@@ -76,15 +129,16 @@ async function processQueue() {
 
       item.callSid = call.sid;
       item.status  = 'done';
+      persistUpdate(item);
       conversation.create(call.sid, item.debtorInfo);
       log.info('Queue', `Llamada iniciada SID=${call.sid}`, { id: item.id });
     } catch (err) {
       item.status = 'error';
       item.error  = err.message;
+      persistUpdate(item);
       log.error('Queue', `Error llamando ${item.phone}`, { id: item.id, error: err.message });
     }
 
-    // 8-second gap before next call
     if (!stopped && queue.some(i => i.status === 'pending')) {
       await delay(CALL_GAP_MS);
     }
@@ -96,11 +150,8 @@ async function processQueue() {
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ── Start ──────────────────────────────────────────────────────────────────
-
 function startProcessing() {
-  // Fire-and-forget; errors are caught inside processQueue
   processQueue().catch(err => log.error('Queue', 'Error inesperado en procesador', { error: err.message }));
 }
 
-module.exports = { addToQueue, addBatch, clearPending, getQueueStatus, resetQueue, startProcessing };
+module.exports = { addToQueue, addBatch, clearPending, getQueueStatus, resetQueue, resetQueueAndSheets, resumeFromSheets, startProcessing };
